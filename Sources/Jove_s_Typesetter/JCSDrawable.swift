@@ -1,11 +1,5 @@
 import CoreGraphics
 
-/* Pagination
-	will require a Drawable Group (keep together)
-	and a 'y' cursor in context
-*/
-
-//TODO: Add Pagination, JCSAlign, JCSAspect, JCSInsets to the rendering chain
 public protocol JCSDrawable {
 	func measure(bounds: CGSize) -> CGSize
 

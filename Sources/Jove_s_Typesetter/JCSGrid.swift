@@ -1,8 +1,12 @@
 import CoreGraphics
 
 public struct JCSGrid: JCSDrawable {
-// TODO: Feature - pagination
-// TODO: Feature - pivot table
+// TODO: Feature - Pagination
+// TODO: Feature - Pivot Table
+// TODO: Bug - for rows and columns, if there are several zero-sized elements at the end, we will have an extra gap
+// TODO: Feature - Wrapping 'wrapping: Direction?'
+//     hits bottom, sets y = 0 and x+=width, measured width needs to account
+//     hits right, sets x = 0 and y+=height, measured height needs to account
 
 // Columns
 	public struct ColumnRendering {
@@ -12,23 +16,20 @@ public struct JCSGrid: JCSDrawable {
 	}
 	public struct ColumnDef {
 		public let width: JCSSize
+		public let align: JCSAlign
 		public let gap: CGFloat
 		public let render: ((ColumnRendering)->())?
 
 		public init(
-			debug: Bool,
 			width: JCSSize = .intrinsic(),
+			align: JCSAlign = .left,
 			gap: CGFloat = 2.0,
 			render: ((ColumnRendering) -> ())? = nil
 		) {
 			self.width = width
+			self.align = align
 			self.gap = gap
-			self.render = {
-				render?($0)
-				if debug {
-					JCSRect(fill: .clear, stroke: .green.withAlphaComponent(0.5), lineWidth: 0.5, radius: 0.0).draw(in: $0.rect)
-				}
-			}
+			self.render = render
 		}
 	}
 	public typealias Columns = [ColumnDef]
@@ -42,22 +43,20 @@ public struct JCSGrid: JCSDrawable {
 	}
 	public struct RowDef {
 		public let height: JCSSize
+		public let align: JCSAlign
 		public let gap: CGFloat
 		public let render: ((RowRendering)->())?
 
 		public init(
-			debug: Bool,
 			height: JCSSize = .intrinsic(),
-			gap: CGFloat = 2.0, render: ((RowRendering) -> ())? = nil
+			align: JCSAlign = .top,
+			gap: CGFloat = 2.0,
+			render: ((RowRendering) -> ())? = nil
 		) {
 			self.height = height
+			self.align = align
 			self.gap = gap
-			self.render = {
-				render?($0)
-				if debug {
-					JCSRect(fill: .clear, stroke: .blue.withAlphaComponent(0.5), lineWidth: 0.5, radius: 0.0).draw(in: $0.rect)
-				}
-			}
+			self.render = render
 		}
 	}
 	public struct Rows {
@@ -68,7 +67,7 @@ public struct JCSGrid: JCSDrawable {
 		public init(
 			min: Int = 0,
 			max: Int = Int.max,
-			def: @escaping (Int) -> RowDef
+			def: @escaping (Int) -> RowDef = {_ in .init() }
 		) {
 			self.min = min
 			self.max = max
@@ -83,6 +82,7 @@ public struct JCSGrid: JCSDrawable {
 		public let r: Int
 		public let i: Int
 		public let rect: CGRect
+		public let content: CGRect
 
 		public func render() {
 			def.cell(at: i)?.draw(in: rect);
@@ -91,27 +91,26 @@ public struct JCSGrid: JCSDrawable {
 	public typealias CellDef = JCSDrawable
 	public struct Cells {
 		public var count: Int { content.count }
+		public let render: (CellRendering)->()
 		public let content: [CellDef]
-		public let render: ((CellRendering)->())
 
-		public init(debug: Bool, content: [CellDef], render: ((CellRendering) -> ())?) {
+		public init(
+			render: ((CellRendering) -> ())? = nil,
+			content: [CellDef]
+			) {
 			self.content = content
 			self.render = {
 				if let render { render($0) } else { $0.render() }
-				if debug {
-					JCSRect(fill: .clear, stroke: .red.withAlphaComponent(0.5), lineWidth: 0.5, radius: 0.0).draw(in: $0.rect)
-				}
 			}
 		}
 
-		public func cell(at i: Int) -> JCSDrawable? {
+		public func cell(at i: Int) -> CellDef? {
 			i < count ? content[i] : nil
 		}
 	}
 
 // Definition
 	public struct Definition {
-		public let dbgName: String
 		public let columns: [ColumnDef]
 		public let rows: Rows
 		public let cells: Cells
@@ -135,18 +134,16 @@ public struct JCSGrid: JCSDrawable {
 		public func cellIdx(_ c: Int, _ r: Int) -> Int { c + (r * columnCount) }
 
 		public init(
-			dbgName: String,
 			columns: [ColumnDef],
 			rows: Rows,
 			cells: Cells
 		) {
-			self.dbgName = dbgName
 			self.columns = columns
 			self.rows = rows
 			self.cells = cells
 		}
 
-		public func cell(at i: Int) -> JCSDrawable? {
+		public func cell(at i: Int) -> CellDef? {
 			cells.cell(at: i)
 		}
 	}
@@ -159,15 +156,50 @@ public struct JCSGrid: JCSDrawable {
 	private let fixedLayout: CalculatedLayout?
 	private let layoutCache: LayoutCache
 
+	public init(
+		flow: ColumnDef, //There is no wrapping
+		_ rows: Rows = .init(),
+		_ cells: Cells
+	) {
+		self.init(
+			Array(repeating: flow, count: cells.count),
+			rows,
+			cells)
+	}
+
+	public init(
+		_ columns: Columns,
+		_ rows: Rows = .init(),
+		render: ((CellRendering) -> ())? = nil,
+		@JCSDrawableBuilder content: ()->[CellDef]
+	) {
+		self.init(
+			columns,
+			rows,
+			Cells(render: render, content: content()))
+	}
+
+	public init(
+		flow: ColumnDef, //There is no wrapping
+		_ rows: Rows = .init(),
+		render: ((CellRendering) -> ())? = nil,
+		@JCSDrawableBuilder content: ()->[CellDef]
+	) {
+		let allContent = content()
+		self.init(
+			Array(repeating: flow, count: allContent.count),
+			rows,
+			Cells(render: render, content: allContent))
+	}
+
 	// Row/Column sorting should happen outside the Grid.
 	// This is not a reactive grid where columns/rows/cells have identity.
 	public init(
-		dbgName: String = "",
 		_ columns: Columns,
-		_ rows: Rows,
+		_ rows: Rows = .init(),
 		_ cells: Cells
 	) {
-		let def = Definition(dbgName: dbgName, columns: columns, rows: rows, cells: cells)
+		let def = Definition(columns: columns, rows: rows, cells: cells)
 		self.def = def
 		self.layoutCache = LayoutCache()
 
@@ -201,6 +233,10 @@ public struct JCSGrid: JCSDrawable {
 		var columnWidths: [CGFloat] = []
 		var rowHeights: [CGFloat] = []
 		var size: CGSize = .zero
+
+		func contentSize(at i: Int) -> CGSize? {
+			i < measured.count ? measured[i] : nil
+		}
 	}
 
 	private static func prepare(_ def: Definition) -> PreparedLayout {
@@ -621,13 +657,19 @@ public struct JCSGrid: JCSDrawable {
 					if height > 0 {
 						let row = def.rows.def(r)
 						let i = def.cellIdx(c, r)
-						let cellRect = CGRect(x: x, y: y, width: width, height: height)
+						let cellOrigin = CGPoint(x: x, y: y)
+						let cellSize = CGSize(width: width, height: height)
+						let contentSize = calculated.contentSize(at: i) ?? cellSize
+						let alignment = column.align.union(row.align)
+						let cellRect = CGRect(origin: cellOrigin, size: cellSize)
+						let renderRect = alignment.apply(size: contentSize, in: cellRect)
 						let rendering = CellRendering(
 							def: def,
 							c: c,
 							r: r,
 							i: i,
-							rect: cellRect
+							rect: cellRect,
+							content: renderRect
 						)
 						def.cells.render(rendering)
 						y += height + row.gap
