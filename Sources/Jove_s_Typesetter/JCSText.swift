@@ -10,6 +10,7 @@ public struct JCSText: JCSDrawable {
 	public let maxLines: Int
 	public let content: NSAttributedString? //TODO: Not Sendable
 
+	//TODO: API - remove alignment paramater
 	public init(
 		text: String?,
 		color: UIColor = UIColor.black,
@@ -76,15 +77,5 @@ public struct JCSText: JCSDrawable {
 			r = alignment.apply(size: size, in: rect).integral
 		}
 		content.draw(with: r, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
-	}
-
-	//TODO: delete after checkmark refactor
-	@discardableResult
-	func draw2(at point: CGPoint, bounds: CGSize = .unbounded) -> CGRect {
-		guard let content else { return .zero }
-		let size = measure(bounds: bounds)
-		let rect = CGRect(origin: point, size: size)
-		content.draw(with: rect, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
-		return rect
 	}
 }

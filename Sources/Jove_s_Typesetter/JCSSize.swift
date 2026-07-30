@@ -4,7 +4,7 @@ public enum JCSSize: Sendable, Codable, CustomStringConvertible {
 	case fixed(_ value: CGFloat)
 	case intrinsic(bound: CGFloat = .unbounded, min: CGFloat? = nil)
 	case fill(_ fraction: CGFloat? = nil)
-	case uniform
+	case uniform //TODO: Feature - reduce function (currently max)
 
 	public var description: String {
 		switch self {

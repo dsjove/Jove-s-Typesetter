@@ -149,14 +149,17 @@ public struct JCSGrid: JCSDrawable {
 		}
 	}
 
+// Members
 	public let def: Definition
 	public var fixedWidth: Bool { !preparedLayout.hasFillColumns }
 	public var fixedHeight: Bool { !preparedLayout.hasFillRows }
+	public var intrinsicSize: CGSize { fixedLayout?.size ?? (layoutCache.calculated?.size ?? .zero) }
 
 	private let preparedLayout: PreparedLayout
 	private let fixedLayout: CalculatedLayout?
 	private let layoutCache: LayoutCache
 
+// API
 	public init(
 		flow: ColumnDef, //There is no wrapping
 		_ rows: Rows = .init(),
@@ -218,6 +221,15 @@ public struct JCSGrid: JCSDrawable {
 		}
 	}
 
+	public func measure(bounds: CGSize) -> CGSize {
+		calculatedLayout(for: bounds).size
+	}
+
+	public func draw(in srcRect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
+		drawing(in: srcRect, contentSize: contentSize, alignment: alignment)
+	}
+
+// Private Impl
 	private struct PreparedLayout {
 		var measured: [CGSize] = []
 		var columnWidths: [CGFloat] = []
@@ -251,7 +263,6 @@ public struct JCSGrid: JCSDrawable {
 		var hasFillColumns = false
 		var hasFillRows = false
 
-	// Determine if we have fill rows
 		for r in 0..<rowCount {
 			if case .fill = def.rows.def(r).height {
 				hasFillRows = true
@@ -259,7 +270,6 @@ public struct JCSGrid: JCSDrawable {
 			}
 		}
 
-	// Measure everything whose width is known without a container width.
 		for i in 0..<cellCount {
 			let c = i % columnCount
 			let column = def.columns[c]
@@ -281,7 +291,6 @@ public struct JCSGrid: JCSDrawable {
 				}
 			}
 		}
-	// Calculate fixed, intrinsic, and preliminary uniform column widths.
 		for (c, column) in def.columns.enumerated() {
 			switch column.width {
 				case .fixed, .intrinsic, .uniform:
@@ -295,7 +304,6 @@ public struct JCSGrid: JCSDrawable {
 					break
 			}
 		}
-	// Make uniform columns use the widest natural uniform-column width.
 		var uniformMax: CGFloat = 0
 		var uniformIndex = -1
 		for (c, column) in def.columns.enumerated() {
@@ -326,12 +334,6 @@ public struct JCSGrid: JCSDrawable {
 		)
 	}
 
-	// Drawable measure
-	public func measure(bounds: CGSize) -> CGSize {
-		calculatedLayout(for: bounds).size
-	}
-
-	// Make decision to call calculateFillColumns
 	private static func calculateLayout(
 		_ def: Definition,
 		_ prep: PreparedLayout,
@@ -603,15 +605,15 @@ public struct JCSGrid: JCSDrawable {
 	}
 
 	// Drawable draw
-	public func draw(in srcRect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
-		let rect = alignment.apply(size: contentSize, in: srcRect)
+	public func drawing(in srcRect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
+		let rect = alignment.apply(size: intrinsicSize, in: srcRect)
+
 		let calculated = calculatedLayout(for: rect.size)
-		let origin = rect.origin
 		let maxX = rect.maxX
 		let maxY = rect.maxY
 		let columnCount = def.columnCount
 		let rowCount = def.rowCount
-		var cx = origin.x
+		var cx = rect.minX
 		for c in 0..<columnCount {
 			if cx > maxX { break }
 			let width = calculated.columnWidths[c]
@@ -621,14 +623,14 @@ public struct JCSGrid: JCSDrawable {
 					let rendering = ColumnRendering(
 						def: def,
 						c: c,
-						rect: CGRect(x: cx, y: origin.y, width: width, height: calculated.size.height)
+						rect: CGRect(x: cx, y: rect.minY, width: width, height: calculated.size.height)
 					)
 					render(rendering)
 				}
 				cx += width + column.gap
 			}
 		}
-		var ry = origin.y
+		var ry = rect.minY
 		for r in 0..<rowCount {
 			if ry > maxY { break }
 			let height = calculated.rowHeights[r]
@@ -639,20 +641,20 @@ public struct JCSGrid: JCSDrawable {
 						def: def,
 						row: row,
 						r: r,
-						rect: CGRect(x: origin.x, y: ry, width: calculated.size.width, height: height )
+						rect: CGRect(x: rect.minX, y: ry, width: calculated.size.width, height: height )
 					)
 					render(rendering)
 				}
 				ry += height + row.gap
 			}
 		}
-		var x = origin.x
+		var x = rect.minX
 		for c in 0..<columnCount {
 			if x > maxX { break }
 			let width = calculated.columnWidths[c]
 			let column = def.columns[c]
 			if width > 0 {
-				var y = origin.y
+				var y = rect.minY
 				for r in 0..<rowCount {
 					if y > maxY { break }
 					let height = calculated.rowHeights[r]
@@ -682,7 +684,6 @@ public struct JCSGrid: JCSDrawable {
 		}
 	}
 
-	// Make decision to return fixedLayout or access cache (for fills)
 	private func calculatedLayout(
 		for bounds: CGSize
 	) -> CalculatedLayout {
@@ -699,8 +700,8 @@ public struct JCSGrid: JCSDrawable {
 	}
 
 	private final class LayoutCache {
-		private var key: CGSize?
-		private var calculated: CalculatedLayout?
+		public private(set) var key: CGSize?
+		public private(set) var calculated: CalculatedLayout?
 
 		init() {}
 

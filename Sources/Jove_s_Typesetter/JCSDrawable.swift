@@ -1,9 +1,10 @@
 import CoreGraphics
 
 public protocol JCSDrawable {
+	// required content size, do not return unbounded values
 	func measure(bounds: CGSize) -> CGSize
 
-	//Rect with unbounded size is undefined
+	//rect and contentSize with unbounded values is undefined
 	func draw(in rect: CGRect, contentSize: CGSize, alignment: JCSAlign)
 
 	var page: Pagination { get }
