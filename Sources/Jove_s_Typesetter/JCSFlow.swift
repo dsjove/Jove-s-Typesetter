@@ -679,7 +679,7 @@ public struct JCSFlow: JCSDrawable {
 	}
 
 // Drawable draw
-	public func draw(in rect: CGRect) {
+	public func draw(in rect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
 		let calculated = calculateLayout(bounds: rect.size)
 		let occupiedRect = def.contentAlignment.apply(
 			size: calculated.occupiedSize,

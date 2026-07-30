@@ -82,10 +82,11 @@ public struct JCSGrid: JCSDrawable {
 		public let r: Int
 		public let i: Int
 		public let rect: CGRect
-		public let content: CGRect
+		public let content: CGSize?
+		public let alignment: JCSAlign
 
 		public func render() {
-			def.cell(at: i)?.draw(in: rect);
+			def.cell(at: i)?.draw(in: rect, contentSize: content, alignment: alignment);
 		}
 	}
 	public typealias CellDef = JCSDrawable
@@ -602,7 +603,8 @@ public struct JCSGrid: JCSDrawable {
 	}
 
 	// Drawable draw
-	public func draw(in rect: CGRect) {
+	public func draw(in srcRect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
+		let rect = alignment.apply(size: contentSize, in: srcRect)
 		let calculated = calculatedLayout(for: rect.size)
 		let origin = rect.origin
 		let maxX = rect.maxX
@@ -659,17 +661,17 @@ public struct JCSGrid: JCSDrawable {
 						let i = def.cellIdx(c, r)
 						let cellOrigin = CGPoint(x: x, y: y)
 						let cellSize = CGSize(width: width, height: height)
-						let contentSize = calculated.contentSize(at: i) ?? cellSize
+						let contentSize = calculated.contentSize(at: i)
 						let alignment = column.align.union(row.align)
 						let cellRect = CGRect(origin: cellOrigin, size: cellSize)
-						let renderRect = alignment.apply(size: contentSize, in: cellRect)
 						let rendering = CellRendering(
 							def: def,
 							c: c,
 							r: r,
 							i: i,
 							rect: cellRect,
-							content: renderRect
+							content: contentSize,
+							alignment: alignment
 						)
 						def.cells.render(rendering)
 						y += height + row.gap

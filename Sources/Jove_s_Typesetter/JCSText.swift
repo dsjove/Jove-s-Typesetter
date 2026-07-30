@@ -67,7 +67,7 @@ public struct JCSText: JCSDrawable {
 		return measured
 	}
 
-	public func draw(in rect: CGRect) {
+	public func draw(in rect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
 		guard let content else { return }
 		var r = rect
 		if alignment.contains(.bottom) {

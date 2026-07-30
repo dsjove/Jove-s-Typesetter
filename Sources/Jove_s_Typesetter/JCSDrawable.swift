@@ -4,7 +4,7 @@ public protocol JCSDrawable {
 	func measure(bounds: CGSize) -> CGSize
 
 	//Rect with unbounded size is undefined
-	func draw(in rect: CGRect)
+	func draw(in rect: CGRect, contentSize: CGSize, alignment: JCSAlign)
 
 	var page: Pagination { get }
 }
@@ -16,10 +16,15 @@ public extension JCSDrawable {
 		measure(bounds: .unbounded)
 	}
 
+	func draw(in rect: CGRect, contentSize: CGSize? = nil, alignment: JCSAlign = .leftTop) {
+		draw(in: rect, contentSize: contentSize ?? rect.size, alignment: alignment)
+	}
+
 	@discardableResult
 	func draw(at origin: CGPoint, bounds: CGSize = .unbounded) -> CGRect {
-		let rect = CGRect(origin: origin, size: measure(bounds: bounds))
-		draw(in: rect)
+		let contentSize = measure(bounds: bounds)
+		let rect = CGRect(origin: origin, size: contentSize)
+		draw(in: rect, contentSize: contentSize)
 		return rect
 	}
 
@@ -30,7 +35,7 @@ public extension JCSDrawable {
 
 public struct JCSEmptyDrawable: JCSDrawable {
 	public func measure(bounds: CGSize) -> CGSize { .zero }
-	public func draw(in rect: CGRect) {}
+	public func draw(in rect: CGRect, contentSize: CGSize, alignment: JCSAlign) {}
 
 	public init() {}
 }
