@@ -1,6 +1,6 @@
 import CoreGraphics
 
-public enum Direction: Int, Sendable, Codable, CustomStringConvertible {
+public enum JCSAxis: Int, Sendable, Codable, CustomStringConvertible {
 	case horizontal
 	case vertical
 

@@ -18,4 +18,6 @@ public enum JCSDimension: CustomStringConvertible {
 			"fill\(fraction?.description ?? "⋯")"
 		}
 	}
+
+	//TODO: Design - can we have generic apply method that reads an array of elements with property path and then calls a setter?
 }

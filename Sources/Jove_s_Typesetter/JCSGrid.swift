@@ -2,7 +2,7 @@ import CoreGraphics
 
 public struct JCSGrid: JCSLayoutElement {
 // TODO: Feature - Pivot Table
-// TODO: Feature - Wrapping 'wrapping: Direction?'
+// TODO: Feature - Wrapping 'wrapping: JCSAxis?'
 //     hits bottom, sets y = 0 and x+=width, measured width needs to account
 //     hits right, sets x = 0 and y+=height, measured height needs to account
 // TODO: Bug - use uniform accume function

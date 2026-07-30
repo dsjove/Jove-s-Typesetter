@@ -3,22 +3,31 @@ import UIKit
 
 public struct JCSText: JCSLayoutElement {
 	public let text: String?
-	public let color: UIColor
 	public let font: UIFont
+	public let color: UIColor
 	public let minLines: Int
 	public let maxLines: Int
 	public let content: NSMutableAttributedString?
 
 	public init(
-		text: String?,
-		color: UIColor = UIColor.black,
+		_ text: String?,
 		font: UIFont = UIFont.systemFont(ofSize: 9.0),
+		color: UIColor = UIColor.black,
+		lines: Int
+	) {
+		self.init(text, font: font, color: color, minLines: lines, maxLines: lines)
+	}
+
+	public init(
+		_ text: String?,
+		font: UIFont = UIFont.systemFont(ofSize: 9.0),
+		color: UIColor = UIColor.black,
 		minLines: Int = 0,
 		maxLines: Int = Int.max
 	) {
 		self.text = text
-		self.color = color
 		self.font = font
+		self.color = color
 		self.minLines = minLines
 		self.maxLines = maxLines
 
@@ -62,13 +71,15 @@ public struct JCSText: JCSLayoutElement {
 	public func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment) {
 		guard let content else { return }
 		var r = allocated
-
-		//NSAttributedString has alignment built in
-		let paragraphStyle = NSMutableParagraphStyle()
-		paragraphStyle.alignment = align.textAlignment
+		//NSAttributedString has alignment built into thr attributes
 		content.addAttribute(
 			.paragraphStyle,
-			value: paragraphStyle,
+			value: {
+				let paragraphStyle = NSMutableParagraphStyle()
+				paragraphStyle.alignment = align.textAlignment
+				paragraphStyle.lineBreakMode = .byWordWrapping
+				return paragraphStyle
+			}(),
 			range: NSRange(
 				location: 0,
 				length: content.length
