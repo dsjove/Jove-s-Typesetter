@@ -1,7 +1,7 @@
 import CoreGraphics
 import UIKit
 
-public struct JCSText: JCSDrawable {
+public struct JCSText: JCSLayoutElement {
 	public let text: String?
 	public let color: UIColor
 	public let font: UIFont
@@ -59,13 +59,13 @@ public struct JCSText: JCSDrawable {
 		return measured
 	}
 
-	public func draw(in rect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
+	public func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment) {
 		guard let content else { return }
-		var r = rect
+		var r = allocated
 
 		//NSAttributedString has alignment built in
 		let paragraphStyle = NSMutableParagraphStyle()
-		paragraphStyle.alignment = alignment.textAlignment
+		paragraphStyle.alignment = align.textAlignment
 		content.addAttribute(
 			.paragraphStyle,
 			value: paragraphStyle,
@@ -75,9 +75,9 @@ public struct JCSText: JCSDrawable {
 			)
 		)
 		//NSAttributedString has no notion of vertical alignment
-		if alignment.contains(.bottom) {
-			let size = measure(bounds: rect.size)
-			r = alignment.apply(size: size, in: rect).integral
+		if align.contains(.bottom) {
+			let size = measure(bounds: allocated.size)
+			r = align.apply(size: size, in: allocated).integral
 		}
 		content.draw(with: r, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
 	}

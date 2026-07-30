@@ -36,17 +36,17 @@ public struct PDFGenerator {
 		self.landscape = landscape
 	}
 
-	public func render(_ drawable: JCSDrawable) -> Data {
+	public func render(_ drawable: JCSLayoutElement) -> Data {
 		let pageRect = pageSize.rect(landscape: landscape, margin: .zero)
 		let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
 		return renderer.pdfData { context in
 			let page = PDFPagination(context, pageSize, margin, landscape)
 			//Not measured
-			drawable.draw(in: page.drawRect)
+			drawable.draw(in: page.contentRect)
 		}
 	}
 
-	public func form(_ drawable: JCSDrawable) -> (Data, PDFDocument?) {
+	public func form(_ drawable: JCSLayoutElement) -> (Data, PDFDocument?) {
 		let pdfData: Data = render(drawable)
 		return (pdfData, PDFDocument(data: pdfData))
 	}

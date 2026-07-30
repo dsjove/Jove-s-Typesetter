@@ -1,6 +1,6 @@
 import CoreGraphics
 
-public struct JCSGrid: JCSDrawable {
+public struct JCSGrid: JCSLayoutElement {
 // TODO: Feature - Pivot Table
 // TODO: Feature - Wrapping 'wrapping: Direction?'
 //     hits bottom, sets y = 0 and x+=width, measured width needs to account
@@ -15,14 +15,14 @@ public struct JCSGrid: JCSDrawable {
 		public let rect: CGRect
 	}
 	public struct ColumnDef {
-		public let width: JCSSize
-		public let align: JCSAlign
+		public let width: JCSDimension
+		public let align: JCSAlignment
 		public let gap: CGFloat
 		public let render: ((ColumnRendering)->())?
 
 		public init(
-			width: JCSSize = .intrinsic(),
-			align: JCSAlign = .left,
+			width: JCSDimension = .intrinsic(),
+			align: JCSAlignment = .left,
 			gap: CGFloat = 2.0,
 			render: ((ColumnRendering) -> ())? = nil
 		) {
@@ -42,14 +42,14 @@ public struct JCSGrid: JCSDrawable {
 		public let rect: CGRect
 	}
 	public struct RowDef {
-		public let height: JCSSize
-		public let align: JCSAlign
+		public let height: JCSDimension
+		public let align: JCSAlignment
 		public let gap: CGFloat
 		public let render: ((RowRendering)->())?
 
 		public init(
-			height: JCSSize = .intrinsic(),
-			align: JCSAlign = .top,
+			height: JCSDimension = .intrinsic(),
+			align: JCSAlignment = .top,
 			gap: CGFloat = 2.0,
 			render: ((RowRendering) -> ())? = nil
 		) {
@@ -83,13 +83,13 @@ public struct JCSGrid: JCSDrawable {
 		public let i: Int
 		public let rect: CGRect
 		public let content: CGSize?
-		public let alignment: JCSAlign
+		public let alignment: JCSAlignment
 
 		public func render() {
-			def.cell(at: i)?.draw(in: rect, contentSize: content, alignment: alignment);
+			def.cell(at: i)?.draw(in: rect, measured: content, align: alignment);
 		}
 	}
-	public typealias CellDef = JCSDrawable
+	public typealias CellDef = JCSLayoutElement
 	public struct Cells {
 		public var count: Int { content.count }
 		public let render: (CellRendering)->()
@@ -161,12 +161,12 @@ public struct JCSGrid: JCSDrawable {
 
 // API
 	public init(
-		flow: ColumnDef, //There is no wrapping
+		repeating def: ColumnDef,
 		_ rows: Rows = .init(),
 		_ cells: Cells
 	) {
 		self.init(
-			Array(repeating: flow, count: cells.count),
+			Array(repeating: def, count: cells.count),
 			rows,
 			cells)
 	}
@@ -175,7 +175,7 @@ public struct JCSGrid: JCSDrawable {
 		_ columns: Columns,
 		_ rows: Rows = .init(),
 		render: ((CellRendering) -> ())? = nil,
-		@JCSDrawableBuilder content: ()->[CellDef]
+		@JCSLayoutElementBuilder content: ()->[CellDef]
 	) {
 		self.init(
 			columns,
@@ -187,7 +187,7 @@ public struct JCSGrid: JCSDrawable {
 		flow: ColumnDef, //There is no wrapping
 		_ rows: Rows = .init(),
 		render: ((CellRendering) -> ())? = nil,
-		@JCSDrawableBuilder content: ()->[CellDef]
+		@JCSLayoutElementBuilder content: ()->[CellDef]
 	) {
 		let allContent = content()
 		self.init(
@@ -225,8 +225,8 @@ public struct JCSGrid: JCSDrawable {
 		calculatedLayout(for: bounds).size
 	}
 
-	public func draw(in srcRect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
-		drawing(in: srcRect, contentSize: contentSize, alignment: alignment)
+	public func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment) {
+		drawing(allocated, measured, align)
 	}
 
 // Private Impl
@@ -599,10 +599,11 @@ public struct JCSGrid: JCSDrawable {
 	}
 
 	// Drawable draw
-	public func drawing(in srcRect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
-		let rect = alignment.apply(size: intrinsicSize, in: srcRect)
-
+	public func drawing(_ allocated: CGRect, _ measured: CGSize, _ alignment: JCSAlignment) {
+		//TODO: Bug - ordering
+		let rect = alignment.apply(size: intrinsicSize, in: allocated)
 		let calculated = calculatedLayout(for: rect.size)
+
 		let maxX = rect.maxX
 		let maxY = rect.maxY
 		let columnCount = def.columnCount

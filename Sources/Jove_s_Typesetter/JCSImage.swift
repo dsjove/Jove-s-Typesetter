@@ -1,7 +1,7 @@
 import CoreGraphics
 import UIKit
 
-public struct JCSImage: JCSDrawable {
+public struct JCSImage: JCSLayoutElement {
 	public let source: JCSImageSource
 	public let cornerRadius: CGFloat
 	public let aspect: JCSAspect
@@ -26,10 +26,10 @@ public struct JCSImage: JCSDrawable {
 		aspect.apply(size: image?.size ?? .zero, in: bounds)
 	}
 
-	public func draw(in rect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
+	public func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment) {
 		if let image = image {
-			let sized = aspect.apply(size: image.size, in: rect.size)
-			let placed = alignment.apply(size: sized, in: rect)
+			let sized = aspect.apply(size: image.size, in: allocated.size)
+			let placed = align.apply(size: sized, in: allocated)
 			if let ctx = UIGraphicsGetCurrentContext() {
 				ctx.saveGState()
 				defer { ctx.restoreGState() }

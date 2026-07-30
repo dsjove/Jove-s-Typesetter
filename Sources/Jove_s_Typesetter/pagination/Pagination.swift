@@ -10,12 +10,12 @@ public protocol Pagination: AnyObject {
 
 	func beginPage()
 	var number: Int { get }
-	var cursor: CGFloat { get }
+	var blockCursor: CGFloat { get }
 }
 
 public extension Pagination {
 	var pageRect: CGRect { size.rect(landscape: landscape, margin: .zero) }
-	var drawRect: CGRect { size.rect(landscape: landscape, margin: margin) }
+	var contentRect: CGRect { size.rect(landscape: landscape, margin: margin) }
 
 	//TODO: Feature - Pagination
 	// During drawing (not measuring) we need to be able to track this.
@@ -23,7 +23,7 @@ public extension Pagination {
 	// but a Drawable needs to be smart enough to know when (not) to call it
 	// we also need a 'first draw always begins' check
 	func request(height: CGFloat) {
-		if cursor + height > drawRect.maxY {
+		if blockCursor + height > contentRect.maxY {
 			beginPage()
 		}
 	}
@@ -34,7 +34,7 @@ public class BasicPagination: Pagination {
 	public let size: PageSize
 	public let margin: CGSize
 	public let landscape: Bool
-	public private(set) var cursor: CGFloat
+	public private(set) var blockCursor: CGFloat
 	public private(set) var number: Int
 	public var conceptName: String
 
@@ -47,13 +47,13 @@ public class BasicPagination: Pagination {
 		self.size = size
 		self.margin = margin
 		self.landscape = landscape
-		self.cursor = 0.0
+		self.blockCursor = 0.0
 		self.number = 0
 		self.conceptName = conceptName ?? "Page 0"
 	}
 
 	public func beginPage() {
-		self.cursor = 0.0
+		self.blockCursor = 0.0
 		self.number += 1
 		self.conceptName = "Page \(number)"
 	}

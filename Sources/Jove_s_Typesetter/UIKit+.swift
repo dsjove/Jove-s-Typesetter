@@ -12,7 +12,7 @@ public extension UIBezierPath {
 }
 
 // NSAttributedString has no notion of vertical alignment
-public extension JCSAlign {
+public extension JCSAlignment {
 	init(_ textAlignment: NSTextAlignment) {
 		switch (textAlignment) {
 			case .left:  self = .leftTop
