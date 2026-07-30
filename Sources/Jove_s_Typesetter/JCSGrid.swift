@@ -1,13 +1,12 @@
 import CoreGraphics
 
 public struct JCSGrid: JCSDrawable {
-// TODO: Feature - Pagination
 // TODO: Feature - Pivot Table
-// TODO: Bug - use uniform accume function
-// TODO: Bug - for rows and columns, if there are several zero-sized elements at the end, we will have an extra gap
 // TODO: Feature - Wrapping 'wrapping: Direction?'
 //     hits bottom, sets y = 0 and x+=width, measured width needs to account
 //     hits right, sets x = 0 and y+=height, measured height needs to account
+// TODO: Bug - use uniform accume function
+// TODO: Bug - for rows and columns, if there are several zero-sized elements at the end, we will have an extra gap
 
 // Columns
 	public struct ColumnRendering {

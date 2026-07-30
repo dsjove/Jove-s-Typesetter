@@ -6,8 +6,6 @@ public enum JCSAspect: Int, Sendable, Codable, CustomStringConvertible {
 	case stretch = 2
 	case original = 3
 
-	//TODO: ratio between resulting width/height allowing for min, max, avg, etc and maybe arbitrary scale
-
 	public var description: String {
 		switch self {
 		case .fit:

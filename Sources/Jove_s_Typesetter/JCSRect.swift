@@ -1,7 +1,7 @@
 import CoreGraphics
 import UIKit
 
-//TODO: this is more of a drawing trait than an entity
+//TODO: Design - this is more of a drawing trait than an entity
 public struct JCSRect {
 	public let fill: UIColor
 	public let stroke: UIColor
@@ -47,7 +47,7 @@ public struct JCSRect {
 	}
 }
 
-//TODO: see JCSRect comment
+//TODO: Design - see JCSRect comment
 public struct JCSLine {
 	public let stroke: UIColor
 	public let lineWidth: CGFloat

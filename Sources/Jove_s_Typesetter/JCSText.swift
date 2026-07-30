@@ -5,37 +5,28 @@ public struct JCSText: JCSDrawable {
 	public let text: String?
 	public let color: UIColor
 	public let font: UIFont
-	public let alignment: JCSAlign
 	public let minLines: Int
 	public let maxLines: Int
-	public let content: NSAttributedString? //TODO: Not Sendable
+	public let content: NSMutableAttributedString?
 
-	//TODO: API - remove alignment paramater
 	public init(
 		text: String?,
 		color: UIColor = UIColor.black,
 		font: UIFont = UIFont.systemFont(ofSize: 9.0),
-		alignment: JCSAlign = .leftTop,
 		minLines: Int = 0,
 		maxLines: Int = Int.max
 	) {
 		self.text = text
 		self.color = color
 		self.font = font
-		self.alignment = alignment
 		self.minLines = minLines
 		self.maxLines = maxLines
 
 		if let text, !text.isEmpty {
-			let paragraphStyle = NSMutableParagraphStyle()
-			paragraphStyle.alignment = alignment.textAlignment
-			paragraphStyle.lineBreakMode = .byWordWrapping
-			let attributes: [NSAttributedString.Key: Any] = [
+			content = NSMutableAttributedString(string: text, attributes: [
 				.font: font,
 				.foregroundColor: color,
-				.paragraphStyle: paragraphStyle
-			]
-			content = NSAttributedString(string: text, attributes: attributes)
+			])
 		}
 		else {
 			content = nil
@@ -71,8 +62,20 @@ public struct JCSText: JCSDrawable {
 	public func draw(in rect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
 		guard let content else { return }
 		var r = rect
+
+		//NSAttributedString has alignment built in
+		let paragraphStyle = NSMutableParagraphStyle()
+		paragraphStyle.alignment = alignment.textAlignment
+		content.addAttribute(
+			.paragraphStyle,
+			value: paragraphStyle,
+			range: NSRange(
+				location: 0,
+				length: content.length
+			)
+		)
+		//NSAttributedString has no notion of vertical alignment
 		if alignment.contains(.bottom) {
-			//NSAttributedString has no notion of vertical alignment
 			let size = measure(bounds: rect.size)
 			r = alignment.apply(size: size, in: rect).integral
 		}

@@ -16,10 +16,21 @@ public protocol Pagination: AnyObject {
 public extension Pagination {
 	var pageRect: CGRect { size.rect(landscape: landscape, margin: .zero) }
 	var drawRect: CGRect { size.rect(landscape: landscape, margin: margin) }
+
+	//TODO: Feature - Pagination
+	// During drawing (not measuring) we need to be able to track this.
+	// cursor is not an 'every item' draw
+	// but a Drawable needs to be smart enough to know when (not) to call it
+	// we also need a 'first draw always begins' check
+	func request(height: CGFloat) {
+		if cursor + height > drawRect.maxY {
+			beginPage()
+		}
+	}
 }
 
 public class BasicPagination: Pagination {
-//TODO: allow for cutom PageSize, here being (max, max)
+//TODO: API - allow for cutom PageSize, here being (max, max)
 	public let size: PageSize
 	public let margin: CGSize
 	public let landscape: Bool
