@@ -30,6 +30,10 @@ public extension CGSize {
 	func inset(by inset: CGFloat) -> CGSize {
 		.init(width: width - inset*2, height: height - inset*2)
 	}
+
+	func inset(dx: CGFloat, dy: CGFloat) -> CGSize {
+		.init(width: width - dx*2, height: height - dy*2)
+	}
 }
 
 public extension Int {
