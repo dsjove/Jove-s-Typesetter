@@ -1,10 +1,10 @@
 import CoreGraphics
 
-public enum JCSSize: Sendable, Codable, CustomStringConvertible {
+public enum JCSSize: CustomStringConvertible {
 	case fixed(_ value: CGFloat)
 	case intrinsic(bound: CGFloat = .unbounded, min: CGFloat? = nil)
 	case fill(_ fraction: CGFloat? = nil)
-	case uniform //TODO: Feature - reduce function (currently max)
+	case uniform(_ reduce: (CGFloat, CGFloat)->CGFloat = max)
 
 	public var description: String {
 		switch self {
@@ -13,7 +13,7 @@ public enum JCSSize: Sendable, Codable, CustomStringConvertible {
 		case .intrinsic(let bound, let min):
 			"intrinsic(\(min ?? 0.0)...\(bound.unboundedDescription))"
 		case .uniform:
-			"uniform"
+			"uniform(∑)"
 		case .fill(let fraction):
 			"fill\(fraction?.description ?? "⋯")"
 		}

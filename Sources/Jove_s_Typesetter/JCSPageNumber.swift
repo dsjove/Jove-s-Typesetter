@@ -1,12 +1,10 @@
-/*
-TODO: Feature - JCSPageNumber
-Drawable
-needs what JCTText needs
-needs format string
+import CoreGraphics
 
-going back to populate page count for all page rendering will require some thinking
- */
-
-
-public struct JCSPageNumber {
+//TODO: Feature - JCSPageNumber
+public struct JCSPageNumber: JCSDrawable {
+	public func measure(bounds: CGSize) -> CGSize {
+		.zero
+	}
+	public func draw(in rect: CGRect, contentSize: CGSize, alignment: JCSAlign) {
+	}
 }

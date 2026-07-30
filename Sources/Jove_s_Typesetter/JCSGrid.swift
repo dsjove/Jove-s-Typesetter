@@ -3,6 +3,7 @@ import CoreGraphics
 public struct JCSGrid: JCSDrawable {
 // TODO: Feature - Pagination
 // TODO: Feature - Pivot Table
+// TODO: Bug - use uniform accume function
 // TODO: Bug - for rows and columns, if there are several zero-sized elements at the end, we will have an extra gap
 // TODO: Feature - Wrapping 'wrapping: Direction?'
 //     hits bottom, sets y = 0 and x+=width, measured width needs to account
@@ -269,7 +270,6 @@ public struct JCSGrid: JCSDrawable {
 				break
 			}
 		}
-
 		for i in 0..<cellCount {
 			let c = i % columnCount
 			let column = def.columns[c]
@@ -474,7 +474,6 @@ public struct JCSGrid: JCSDrawable {
 			switch row.height {
 			case .fixed(let height):
 				rowHeights[r] = max(height, 0)
-
 			case .intrinsic(let bound, let minHeight):
 				for c in 0..<columnCount {
 					let i = def.cellIdx(c, r)
@@ -489,7 +488,6 @@ public struct JCSGrid: JCSDrawable {
 						rowHeights[r] = max(rowHeights[r], height)
 					}
 				}
-
 			case .uniform:
 				for c in 0..<columnCount {
 					let i = def.cellIdx(c, r)
@@ -500,7 +498,6 @@ public struct JCSGrid: JCSDrawable {
 						)
 					}
 				}
-
 			case .fill(let fraction):
 				if fraction == nil || fraction! > 0 {
 					fillRowCount += 1
@@ -522,7 +519,6 @@ public struct JCSGrid: JCSDrawable {
 
 		for r in 0..<rowCount {
 			let row = def.rows.def(r)
-
 			switch row.height {
 			case .fill(let fraction):
 				if fraction == nil || fraction! > 0 {
@@ -537,7 +533,6 @@ public struct JCSGrid: JCSDrawable {
 				}
 			}
 		}
-
 		if consumedHeight > 0 {
 			consumedHeight -= lastGap
 		}
