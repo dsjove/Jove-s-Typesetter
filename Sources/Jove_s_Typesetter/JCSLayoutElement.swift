@@ -10,7 +10,7 @@ public protocol JCSLayoutElement {
 	var page: Pagination { get }
 }
 
-nonisolated(unsafe) internal var drawablePage: Pagination = BasicPagination()
+nonisolated(unsafe) internal var layoutElementPage: Pagination = BasicPagination()
 
 public extension JCSLayoutElement {
 	func measure() -> CGSize {
@@ -30,7 +30,7 @@ public extension JCSLayoutElement {
 	}
 
 	var page: Pagination {
-		drawablePage
+		layoutElementPage
 	}
 }
 
