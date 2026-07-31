@@ -4,7 +4,7 @@ public protocol JCSLayoutElement {
 	// required content size, do not return unbounded values
 	func measure(bounds: CGSize) -> CGSize
 
-	//rect and contentSize with unbounded values is undefined
+	// allocated and contentSize with unbounded values is undefined
 	func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment)
 
 	var page: Pagination { get }
@@ -17,10 +17,12 @@ public extension JCSLayoutElement {
 		measure(bounds: .unbounded)
 	}
 
+	// Does not measure, uses alloacted size if no measurement supplied
 	func draw(in allocated: CGRect, measured: CGSize? = nil, align: JCSAlignment = .leftTop) {
 		draw(in: allocated, measured: measured ?? allocated.size, align: align)
 	}
 
+	// Auto measures and returns allocated rect at origin
 	@discardableResult
 	func draw(at origin: CGPoint, bounds: CGSize = .unbounded) -> CGRect {
 		let measured = measure(bounds: bounds)

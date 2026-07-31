@@ -8,6 +8,7 @@ public struct JCSText: JCSLayoutElement {
 	public let minLines: Int
 	public let maxLines: Int
 	public let content: NSMutableAttributedString?
+// TODO: Bug - do copy-on-write for content member and cache measurement
 
 	public init(
 		_ text: String?,
@@ -71,7 +72,7 @@ public struct JCSText: JCSLayoutElement {
 	public func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment) {
 		guard let content else { return }
 		var r = allocated
-		//NSAttributedString has alignment built into thr attributes
+		//NSAttributedString has alignment built into the attributes
 		content.addAttribute(
 			.paragraphStyle,
 			value: {
