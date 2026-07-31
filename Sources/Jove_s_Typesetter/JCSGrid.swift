@@ -5,8 +5,6 @@ public struct JCSGrid: JCSLayoutElement {
 // TODO: Feature - Wrapping 'wrapping: JCSAxis?'
 //     hits bottom, sets y = 0 and x+=width, measured width needs to account
 //     hits right, sets x = 0 and y+=height, measured height needs to account
-// TODO: Bug - use uniform accume function
-// TODO: Bug - for rows and columns, if there are several zero-sized elements at the end, we will have an extra gap
 // TODO: Bug - do copy-on-write for Layout member
 
 // Columns
@@ -114,6 +112,7 @@ public struct JCSGrid: JCSLayoutElement {
 // API
 	public init(
 		horzFlow col: ColumnDef,
+		//wrap: Bool = false,
 		rows: Rows = .init(),
 		cells: Cells
 	) {
@@ -125,6 +124,7 @@ public struct JCSGrid: JCSLayoutElement {
 
 	public init(
 		horzFlow col: ColumnDef,
+		//wrap: Bool = false,
 		rows: Rows = .init(),
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
@@ -136,6 +136,7 @@ public struct JCSGrid: JCSLayoutElement {
 
 	public init(
 		vertFlow col: ColumnDef,
+		//wrap: Bool = false,
 		rows: Rows = .init(),
 		cells: Cells
 	) {
@@ -147,6 +148,7 @@ public struct JCSGrid: JCSLayoutElement {
 
 	public init(
 		vertFlow col: ColumnDef,
+		//wrap: Bool = false,
 		rows: Rows = .init(),
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
@@ -159,6 +161,7 @@ public struct JCSGrid: JCSLayoutElement {
 	public init(
 		cols: Columns,
 		rows: Rows = .init(),
+		//wrap: JCSAxis? = nil,
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
 		self.init(
@@ -257,6 +260,7 @@ public struct JCSGrid: JCSLayoutElement {
 	internal struct PreparedLayout {
 		var measured: [CGSize] = []
 		var columnWidths: [CGFloat] = []
+		var columnSize: CGFloat = 0
 		var rowDefs: [RowDef] = []
 		var hasFillColumns: Bool = false
 		var hasFillRows: Bool = false
@@ -310,83 +314,73 @@ public struct JCSGrid: JCSLayoutElement {
 
 		internal func prepare() -> PreparedLayout {
 			guard !isEmpty else { return .init() }
+
 			let columnCount = columnCount
 			let rowCount = rowCount
 			let cellCount = cellCount
 			let rowDefs = (0..<rowCount).map(rows.def)
 
 			var measured = Array(repeating: CGSize.zero, count: cellCount)
-			var columnWidths = Array(repeating: CGFloat.zero, count: columnCount)
-			var hasFillColumns = false
-			var hasFillRows = false
+			var intrinsicColumnWidths = Array(
+				repeating: CGFloat.zero,
+				count: columnCount
+			)
 
-			for row in rowDefs {
-				if case .fill = row.height {
-					hasFillRows = true
-					break
-				}
-			}
-			for i in 0..<cellCount {
-				let c = i % columnCount
-				let column = cols[c]
-				if let cell = cell(at: i) {
-					switch column.width {
-					case .fixed(let width):
-						let size = cell.measure(bounds: CGSize(fixedWidth: width))
-						measured[i] = CGSize(width: width, height: size.height)
-					case .intrinsic(let bound, let minW):
-						measured[i] = cell.measure(bounds: CGSize(fixedWidth: bound))
-						if let minW, measured[i].width < minW {
-							measured[i].width = minW
-							measured[i].height = cell.measure(bounds: CGSize(fixedWidth: minW)).height
-						}
-					case .uniform:
-						measured[i] = cell.measure()
-					case .fill:
-						hasFillColumns = true
+			let columns = JCSDimension.apply(
+				to: cols,
+				dimension: \.width,
+				gap: \.gap,
+				available: .unbounded,
+				intrinsic: { c, column, bound in
+					var width: CGFloat = 0
+					for r in 0..<rowCount {
+						let i = cellIdx(c, r)
+						guard i < cellCount else { continue }
+						let size = cells[i].measure(
+							bounds: CGSize(fixedWidth: bound)
+						)
+						measured[i] = size
+						width = max(width, size.width)
 					}
-				}
-			}
-			for (c, column) in cols.enumerated() {
-				switch column.width {
-					case .fixed, .intrinsic, .uniform:
+					intrinsicColumnWidths[c] = width
+					return width
+				},
+				didResolve: { c, column, width in
+					switch column.width {
+					case .fixed:
+						measureColumn(c, width: width, into: &measured)
+					case .intrinsic(_, let minimum):
+						guard minimum != nil else { return }
 						for r in 0..<rowCount {
 							let i = cellIdx(c, r)
-							if i < cellCount {
-								columnWidths[c] = max(columnWidths[c], measured[i].width)
+							guard i < cellCount, measured[i].width < width else {
+								continue
 							}
+							measured[i] = cells[i].measure(
+								bounds: CGSize(fixedWidth: width)
+							)
+						}
+					case .uniform:
+						if intrinsicColumnWidths[c] != width {
+							measureColumn(c, width: width, into: &measured)
 						}
 					case .fill:
 						break
-				}
-			}
-			var uniformMax: CGFloat = 0
-			var uniformIndex = -1
-			for (c, column) in cols.enumerated() {
-				if case .uniform = column.width, columnWidths[c] > uniformMax {
-					uniformMax = columnWidths[c]
-					uniformIndex = c
-				}
-			}
-			if uniformIndex != -1 {
-				for (c, column) in cols.enumerated() {
-					if case .uniform = column.width, c != uniformIndex {
-						columnWidths[c] = uniformMax
-						for r in 0..<rowCount {
-							let i = cellIdx(c, r)
-							if i < cellCount {
-								measured[i] = cells[i].measure(bounds: CGSize(fixedWidth: uniformMax)
-								)
-							}
-						}
 					}
 				}
+			)
+
+			let hasFillRows = rowDefs.contains {
+				if case .fill = $0.height { return true }
+				return false
 			}
+
 			return .init(
 				measured: measured,
-				columnWidths: columnWidths,
+				columnWidths: columns.values,
+				columnSize: columns.size,
 				rowDefs: rowDefs,
-				hasFillColumns: hasFillColumns,
+				hasFillColumns: columns.hasFill,
 				hasFillRows: hasFillRows
 			)
 		}
@@ -406,92 +400,31 @@ public struct JCSGrid: JCSLayoutElement {
 			for requestedWidth: CGFloat
 		) -> PreparedLayout {
 			guard !isEmpty else { return prep }
-
-			let cellCount = cellCount
-			let rowCount = rowCount
 			var measured = prep.measured
-			var columnWidths = prep.columnWidths
+			let preparedColumns = JCSDimension.Applied(
+				values: prep.columnWidths,
+				hasFill: prep.hasFillColumns
+			)
 
-			var consumedWidth: CGFloat = 0
-			var columnsToFill: CGFloat = 0
-			var lastGap: CGFloat = 0
-
-			for (c, column) in cols.enumerated() {
-				switch column.width {
-				case .fill(let fraction):
-					if fraction == nil || fraction! > 0 {
-						columnsToFill += 1
-						consumedWidth += column.gap
-						lastGap = column.gap
-					}
-				default:
-					let width = columnWidths[c]
-					if width > 0 {
-						consumedWidth += width + column.gap
-						lastGap = column.gap
-					}
+			let columns = JCSDimension.apply(
+				to: cols,
+				dimension: \.width,
+				gap: \.gap,
+				available: requestedWidth,
+				prepared: preparedColumns,
+				intrinsic: { _, _, _ in
+					preconditionFailure("Prepared columns must not be remeasured.")
+				},
+				didResolve: { c, column, width in
+					guard case .fill = column.width else { return }
+					measureColumn(c, width: width, into: &measured)
 				}
-			}
-
-			if consumedWidth > 0 {
-				consumedWidth -= lastGap
-			}
-
-			let availableContentWidth = requestedWidth.isUnbounded
-				? 0
-				: max(requestedWidth - consumedWidth, 0)
-
-			var contentRemaining = availableContentWidth
-
-			for (c, column) in cols.enumerated() {
-				guard case .fill(let fraction) = column.width else { continue }
-
-				let resolvedFraction: CGFloat
-				if let fraction {
-					resolvedFraction = fraction
-				} else if columnsToFill > 0 {
-					resolvedFraction = 1.0 / columnsToFill
-				} else {
-					resolvedFraction = 0
-				}
-
-				let requestedContentWidth = max(
-					availableContentWidth * resolvedFraction,
-					0
-				)
-				let contentWidth = min(
-					requestedContentWidth,
-					contentRemaining
-				)
-
-				contentRemaining -= contentWidth
-
-				if contentWidth == 0 {
-					contentRemaining = min(
-						contentRemaining + column.gap,
-						availableContentWidth
-					)
-				}
-
-				columnWidths[c] = contentWidth
-
-				for r in 0..<rowCount {
-					let i = cellIdx(c, r)
-					if i < cellCount {
-						if contentWidth > 0 {
-							measured[i] = cells[i].measure(
-								bounds: CGSize(fixedWidth: contentWidth)
-							)
-						} else {
-							measured[i] = .zero
-						}
-					}
-				}
-			}
+			)
 
 			return .init(
 				measured: measured,
-				columnWidths: columnWidths,
+				columnWidths: columns.values,
+				columnSize: columns.size,
 				rowDefs: prep.rowDefs,
 				hasFillColumns: prep.hasFillColumns,
 				hasFillRows: prep.hasFillRows
@@ -503,152 +436,50 @@ public struct JCSGrid: JCSLayoutElement {
 			requestedHeight: CGFloat
 		) -> CalculatedLayout {
 			guard !isEmpty else { return .init() }
-
 			let columnCount = columnCount
+			let cellCount = cellCount
+
+			let rows = JCSDimension.apply(
+				to: prep.rowDefs,
+				dimension: \.height,
+				gap: \.gap,
+				available: requestedHeight,
+				intrinsic: { r, _, _ in
+					var height: CGFloat = 0
+					for c in 0..<columnCount {
+						let i = cellIdx(c, r)
+						if i < cellCount {
+							height = max(height, prep.measured[i].height)
+						}
+					}
+
+					return height
+				}
+			)
+			return .init(
+				measured: prep.measured,
+				columnWidths: prep.columnWidths,
+				rowDefs: prep.rowDefs,
+				rowHeights: rows.values,
+				size: CGSize(width: prep.columnSize, height: rows.size)
+			)
+		}
+
+		private func measureColumn(
+			_ c: Int,
+			width: CGFloat,
+			into measured: inout [CGSize]
+		) {
 			let rowCount = rowCount
 			let cellCount = cellCount
-			let measured = prep.measured
-			let columnWidths = prep.columnWidths
-			let rowDefs = prep.rowDefs
-
-			var rowHeights = Array(
-				repeating: CGFloat.zero,
-				count: rowCount
-			)
-
-			var uniformMaxHeight: CGFloat = 0
-			var fillRowCount: CGFloat = 0
 
 			for r in 0..<rowCount {
-				let row = rowDefs[r]
-
-				switch row.height {
-				case .fixed(let height):
-					rowHeights[r] = max(height, 0)
-				case .intrinsic(let bound, let minHeight):
-					for c in 0..<columnCount {
-						let i = cellIdx(c, r)
-						if i < cellCount {
-							var height = measured[i].height
-							if let minHeight {
-								height = max(minHeight, height)
-							}
-							if !bound.isUnbounded {
-								height = min(bound, height)
-							}
-							rowHeights[r] = max(rowHeights[r], height)
-						}
-					}
-				case .uniform:
-					for c in 0..<columnCount {
-						let i = cellIdx(c, r)
-						if i < cellCount {
-							uniformMaxHeight = max(
-								uniformMaxHeight,
-								measured[i].height
-							)
-						}
-					}
-				case .fill(let fraction):
-					if fraction == nil || fraction! > 0 {
-						fillRowCount += 1
-					}
-					rowHeights[r] = 0
-				}
+				let i = cellIdx(c, r)
+				guard i < cellCount else { continue }
+				measured[i] = width > 0
+					? cells[i].measure(bounds: CGSize(fixedWidth: width))
+					: .zero
 			}
-
-			if uniformMaxHeight > 0 {
-				for r in 0..<rowCount {
-					if case .uniform = rowDefs[r].height {
-						rowHeights[r] = uniformMaxHeight
-					}
-				}
-			}
-
-			var consumedHeight: CGFloat = 0
-			var lastGap: CGFloat = 0
-
-			for r in 0..<rowCount {
-				let row = rowDefs[r]
-				switch row.height {
-				case .fill(let fraction):
-					if fraction == nil || fraction! > 0 {
-						consumedHeight += row.gap
-						lastGap = row.gap
-					}
-				default:
-					let height = rowHeights[r]
-					if height > 0 {
-						consumedHeight += height + row.gap
-						lastGap = row.gap
-					}
-				}
-			}
-			if consumedHeight > 0 {
-				consumedHeight -= lastGap
-			}
-
-			let availableContentHeight = requestedHeight.isUnbounded
-				? 0
-				: max(requestedHeight - consumedHeight, 0)
-
-			var contentRemaining = availableContentHeight
-
-			if fillRowCount > 0 {
-				for r in 0..<rowCount {
-					let row = rowDefs[r]
-					guard case .fill(let fraction) = row.height else { continue }
-
-					let resolvedFraction = fraction ?? (1.0 / fillRowCount)
-					let requestedRowHeight = max(
-						availableContentHeight * resolvedFraction,
-						0
-					)
-					let rowHeight = min(
-						requestedRowHeight,
-						contentRemaining
-					)
-
-					contentRemaining -= rowHeight
-
-					if rowHeight == 0 {
-						contentRemaining = min(
-							contentRemaining + row.gap,
-							availableContentHeight
-						)
-					}
-
-					rowHeights[r] = rowHeight
-				}
-			}
-
-			var size = CGSize.zero
-			for c in 0..<columnCount {
-				let width = columnWidths[c]
-				if width > 0 {
-					size.width += width
-					if c != columnCount - 1 {
-						size.width += cols[c].gap
-					}
-				}
-			}
-			for r in 0..<rowCount {
-				let height = rowHeights[r]
-				if height > 0 {
-					size.height += height
-					if r != rowCount - 1 {
-						size.height += rowDefs[r].gap
-					}
-				}
-			}
-
-			return .init(
-				measured: measured,
-				columnWidths: columnWidths,
-				rowDefs: prep.rowDefs,
-				rowHeights: rowHeights,
-				size: size
-			)
 		}
 
 		internal func draw(_ layout: CalculatedLayout, _ rect: CGRect) {
@@ -672,8 +503,8 @@ public struct JCSGrid: JCSLayoutElement {
 							rect: CGRect(x: x, y: rect.minY, width: width, height: layout.size.height)
 						)
 						render(rendering)
+						x += width + column.gap
 					}
-					x += width + column.gap
 				}
 			}
 			if let render = render.row {

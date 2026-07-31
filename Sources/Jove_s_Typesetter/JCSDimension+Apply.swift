@@ -23,6 +23,7 @@ extension JCSDimension {
 		gap: KeyPath<Element, CGFloat>,
 		available: CGFloat,
 		fillConsumesSpace: Bool = true,
+		prepared: Applied? = nil,
 		intrinsic: (
 			_ index: Int,
 			_ element: Element,
@@ -36,74 +37,88 @@ extension JCSDimension {
 	) -> Applied {
 		guard !elements.isEmpty else { return .init() }
 
-		var values = Array(
-			repeating: CGFloat.zero,
-			count: elements.count
-		)
-
-		var uniformCandidates: [(
-			index: Int,
-			value: CGFloat
-		)] = []
-		var uniformReduce: ((CGFloat, CGFloat) -> CGFloat)?
+		var values: [CGFloat]
 		var fillIndices: [Int] = []
 
-		// Resolve fixed and intrinsic dimensions. Collect uniform and fill
-		// dimensions for later passes.
-		for (index, element) in elements.enumerated() {
-			switch element[keyPath: dimension] {
-			case .fixed(let value):
-				values[index] = max(value, 0)
+		if let prepared {
+			precondition(
+				prepared.values.count == elements.count,
+				"Prepared values must match the element count."
+			)
+			values = prepared.values
 
-			case .intrinsic(let bound, let minimum):
-				var value = intrinsic(index, element, bound)
-
-				if let minimum {
-					value = max(value, minimum)
+			for (index, element) in elements.enumerated() {
+				if case .fill = element[keyPath: dimension] {
+					values[index] = 0
+					fillIndices.append(index)
 				}
-
-				if !bound.isUnbounded {
-					value = min(value, bound)
-				}
-
-				values[index] = max(value, 0)
-
-			case .uniform(let reduce):
-				let value = intrinsic(index, element, .unbounded)
-				uniformCandidates.append((index, max(value, 0)))
-
-				if uniformReduce == nil {
-					uniformReduce = reduce
-				}
-
-			case .fill:
-				fillIndices.append(index)
 			}
-		}
+		} else {
+			values = Array(
+				repeating: CGFloat.zero,
+				count: elements.count
+			)
 
-		// The first uniform element defines the reduction operation for the group.
-		if
-			let first = uniformCandidates.first,
-			let reduce = uniformReduce
-		{
-			let uniformValue = uniformCandidates
-				.dropFirst()
-				.reduce(first.value) {
-					reduce($0, $1.value)
+			var uniformCandidates: [(index: Int, value: CGFloat)] = []
+			var uniformReduce: ((CGFloat, CGFloat) -> CGFloat)?
+
+			// Resolve fixed and intrinsic dimensions. Collect uniform and fill
+			// dimensions for later passes.
+			for (index, element) in elements.enumerated() {
+				switch element[keyPath: dimension] {
+				case .fixed(let value):
+					values[index] = max(value, 0)
+
+				case .intrinsic(let bound, let minimum):
+					var value = intrinsic(index, element, bound)
+
+					if let minimum {
+						value = max(value, minimum)
+					}
+
+					if !bound.isUnbounded {
+						value = min(value, bound)
+					}
+
+					values[index] = max(value, 0)
+
+				case .uniform(let reduce):
+					let value = intrinsic(index, element, .unbounded)
+					uniformCandidates.append((index, max(value, 0)))
+
+					if uniformReduce == nil {
+						uniformReduce = reduce
+					}
+
+				case .fill:
+					fillIndices.append(index)
+				}
+			}
+
+			// The first uniform element defines the reduction operation for the group.
+			if
+				let first = uniformCandidates.first,
+				let reduce = uniformReduce
+			{
+				let uniformValue = uniformCandidates
+					.dropFirst()
+					.reduce(first.value) {
+						reduce($0, $1.value)
+					}
+
+				for candidate in uniformCandidates {
+					values[candidate.index] = max(uniformValue, 0)
+				}
+			}
+
+			// Non-fill values are known before available space is distributed.
+			for (index, element) in elements.enumerated() {
+				if case .fill = element[keyPath: dimension] {
+					continue
 				}
 
-			for candidate in uniformCandidates {
-				values[candidate.index] = max(uniformValue, 0)
+				didResolve(index, element, values[index])
 			}
-		}
-
-		// Non-fill values are known before available space is distributed.
-		for (index, element) in elements.enumerated() {
-			if case .fill = element[keyPath: dimension] {
-				continue
-			}
-
-			didResolve(index, element, values[index])
 		}
 
 		let activeIndices = elements.indices.filter { index in

@@ -514,4 +514,95 @@ struct JCSDimensionApplyTests {
 
 		#expect(apply(items, available: 100).values.count == items.count)
 	}
+
+	@Test("Prepared values resolve only fill dimensions")
+	func preparedValuesResolveOnlyFillDimensions() {
+		let items = [
+			Item(.fixed(20), gap: 5),
+			Item(.intrinsic(), gap: 5, intrinsic: 999),
+			Item(.fill())
+		]
+		let prepared = JCSDimension.Applied(
+			values: [20, 30, 0],
+			size: 55,
+			hasFill: true
+		)
+		var intrinsicCount = 0
+		var resolutions: [Resolution] = []
+
+		let result = JCSDimension.apply(
+			to: items,
+			dimension: \.dimension,
+			gap: \.gap,
+			available: 100,
+			prepared: prepared,
+			intrinsic: { _, _, _ in
+				intrinsicCount += 1
+				return 999
+			},
+			didResolve: { index, _, value in
+				resolutions.append(.init(index: index, value: value))
+			}
+		)
+
+		#expect(result.values == [20, 30, 40])
+		#expect(result.size == 100)
+		#expect(intrinsicCount == 0)
+		#expect(resolutions == [.init(index: 2, value: 40)])
+	}
+
+	@Test("Prepared fill values are discarded before redistribution")
+	func preparedFillValuesAreDiscarded() {
+		let items = [Item(.fixed(20)), Item(.fill())]
+		let prepared = JCSDimension.Applied(
+			values: [20, 500],
+			hasFill: true
+		)
+
+		let result = JCSDimension.apply(
+			to: items,
+			dimension: \.dimension,
+			gap: \.gap,
+			available: 100,
+			prepared: prepared,
+			intrinsic: { _, _, _ in 0 }
+		)
+
+		#expect(result.values == [20, 80])
+		#expect(result.size == 100)
+	}
+
+	@Test("Automatic fills receive no fraction after explicit fills claim all space")
+	func automaticFillAfterFullyClaimedFraction() {
+		let result = apply([
+			Item(.fill(1)),
+			Item(.fill())
+		], available: 100)
+
+		#expect(result.values == [100, 0])
+		#expect(result.size == 100)
+	}
+
+
+	@Test("Trailing zero-sized values do not leave a gap")
+	func trailingZeroSizedValuesDoNotLeaveGap() {
+		let result = apply([
+			Item(.fixed(10), gap: 4),
+			Item(.fixed(20), gap: 50),
+			Item(.fixed(0), gap: 100)
+		])
+
+		#expect(result.values == [10, 20, 0])
+		#expect(result.size == 34)
+	}
+
+	@Test("Intrinsic minimum above bound resolves to bound")
+	func intrinsicMinimumAboveBound() {
+		let result = apply([
+			Item(.intrinsic(bound: 20, min: 30), intrinsic: 10)
+		])
+
+		#expect(result.values == [20])
+	}
+
 }
