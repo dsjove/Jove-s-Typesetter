@@ -2,54 +2,48 @@ import CoreGraphics
 
 public struct JCSGrid: JCSLayoutElement {
 // TODO: Feature - Pivot Table
-// TODO: Feature - Wrapping 'wrapping: JCSAxis?'
-//     hits bottom, sets y = 0 and x+=width, measured width needs to account
-//     hits right, sets x = 0 and y+=height, measured height needs to account
+// TODO: Feature - Layering
+//     grid - existing behavior
+//     wrapped(v) - hits bottom, sets y = 0 and x+=width, measured width needs to account
+//     wrapped(h) - hits right, sets x = 0 and y+=height, measured height needs to account
+//     stacked - JCSGrid intrinsic size is max of cells, drawing changes, all other calcs the same
+//
 // TODO: Bug - do copy-on-write for Layout member
 
-// Columns
-	public struct ColumnDef {
-		public let width: JCSDimension
+	public enum Layering {
+		case grid
+		case wrapped(axis: JCSAxis)
+		case stacked
+	}
+
+	public struct LineDef {
+		public let length: JCSDimension
 		public let align: JCSAlignment
 		public let gap: CGFloat
 
 		public init(
-			width: JCSDimension = .intrinsic(),
+			length: JCSDimension = .intrinsic(),
 			align: JCSAlignment = .left,
 			gap: CGFloat = 2.0
 		) {
-			self.width = width
+			self.length = length
 			self.align = align
 			self.gap = gap
 		}
 	}
-	public typealias Columns = [ColumnDef]
 
-// Rows
-	public struct RowDef {
-		public let height: JCSDimension
-		public let align: JCSAlignment
-		public let gap: CGFloat
+// Columns
+	public typealias Columns = [LineDef]
 
-		public init(
-			height: JCSDimension = .intrinsic(),
-			align: JCSAlignment = .top,
-			gap: CGFloat = 2.0
-		) {
-			self.height = height
-			self.align = align
-			self.gap = gap
-		}
-	}
 	public struct Rows {
 		let min: Int
 		let max: Int
-		let def: (Int)->RowDef
+		let def: (Int)->LineDef
 
 		public init(
 			min: Int = 0,
 			max: Int = Int.max,
-			def: @escaping (Int) -> RowDef = {_ in .init() }
+			def: @escaping (Int) -> LineDef = {_ in .init() }
 		) {
 			self.min = min
 			self.max = max
@@ -64,13 +58,13 @@ public struct JCSGrid: JCSLayoutElement {
 // Rendering
 	public struct ColumnRender {
 		public let spec: Specification
-		public let def: ColumnDef
+		public let def: LineDef
 		public let c: Int
 		public let rect: CGRect
 	}
 	public struct RowRender {
 		public let spec: Specification
-		public let row: RowDef
+		public let row: LineDef
 		public let r: Int
 		public let rect: CGRect
 	}
@@ -111,8 +105,7 @@ public struct JCSGrid: JCSLayoutElement {
 
 // API
 	public init(
-		horzFlow col: ColumnDef,
-		//wrap: Bool = false,
+		horzFlow col: LineDef,
 		rows: Rows = .init(),
 		cells: Cells
 	) {
@@ -123,8 +116,7 @@ public struct JCSGrid: JCSLayoutElement {
 	}
 
 	public init(
-		horzFlow col: ColumnDef,
-		//wrap: Bool = false,
+		horzFlow col: LineDef,
 		rows: Rows = .init(),
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
@@ -135,8 +127,7 @@ public struct JCSGrid: JCSLayoutElement {
 	}
 
 	public init(
-		vertFlow col: ColumnDef,
-		//wrap: Bool = false,
+		vertFlow col: LineDef,
 		rows: Rows = .init(),
 		cells: Cells
 	) {
@@ -147,8 +138,7 @@ public struct JCSGrid: JCSLayoutElement {
 	}
 
 	public init(
-		vertFlow col: ColumnDef,
-		//wrap: Bool = false,
+		vertFlow col: LineDef,
 		rows: Rows = .init(),
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
@@ -161,7 +151,6 @@ public struct JCSGrid: JCSLayoutElement {
 	public init(
 		cols: Columns,
 		rows: Rows = .init(),
-		//wrap: JCSAxis? = nil,
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
 		self.init(
@@ -248,8 +237,10 @@ public struct JCSGrid: JCSLayoutElement {
 	internal struct CalculatedLayout {
 		var measured: [CGSize] = []
 		var columnWidths: [CGFloat] = []
-		var rowDefs: [RowDef] = []
+		var columnOffsets: [CGFloat] = []
+		var rowDefs: [LineDef] = []
 		var rowHeights: [CGFloat] = []
+		var rowOffsets: [CGFloat] = []
 		var size: CGSize = .zero
 
 		func contentSize(at i: Int) -> CGSize? {
@@ -260,8 +251,9 @@ public struct JCSGrid: JCSLayoutElement {
 	internal struct PreparedLayout {
 		var measured: [CGSize] = []
 		var columnWidths: [CGFloat] = []
+		var columnOffsets: [CGFloat] = []
 		var columnSize: CGFloat = 0
-		var rowDefs: [RowDef] = []
+		var rowDefs: [LineDef] = []
 		var hasFillColumns: Bool = false
 		var hasFillRows: Bool = false
 
@@ -271,13 +263,13 @@ public struct JCSGrid: JCSLayoutElement {
 	}
 
 	public struct Specification {
-		public let cols: [ColumnDef]
+		public let cols: [LineDef]
 		public let rows: Rows
 		public let cells: Cells
 		public let render: Render
 
 		public init(
-			cols: [ColumnDef],
+			cols: [LineDef],
 			rows: Rows,
 			cells: Cells,
 			render: Render
@@ -328,42 +320,50 @@ public struct JCSGrid: JCSLayoutElement {
 
 			let columns = JCSDimension.apply(
 				to: cols,
-				dimension: \.width,
+				dimension: \.length,
 				gap: \.gap,
 				available: .unbounded,
 				intrinsic: { c, column, bound in
 					var width: CGFloat = 0
+
 					for r in 0..<rowCount {
 						let i = cellIdx(c, r)
 						guard i < cellCount else { continue }
+
 						let size = cells[i].measure(
 							bounds: CGSize(fixedWidth: bound)
 						)
 						measured[i] = size
 						width = max(width, size.width)
 					}
+
 					intrinsicColumnWidths[c] = width
 					return width
 				},
 				didResolve: { c, column, width in
-					switch column.width {
+					switch column.length {
 					case .fixed:
 						measureColumn(c, width: width, into: &measured)
+
 					case .intrinsic(_, let minimum):
 						guard minimum != nil else { return }
+
 						for r in 0..<rowCount {
 							let i = cellIdx(c, r)
 							guard i < cellCount, measured[i].width < width else {
 								continue
 							}
+
 							measured[i] = cells[i].measure(
 								bounds: CGSize(fixedWidth: width)
 							)
 						}
+
 					case .uniform:
 						if intrinsicColumnWidths[c] != width {
 							measureColumn(c, width: width, into: &measured)
 						}
+
 					case .fill:
 						break
 					}
@@ -371,13 +371,14 @@ public struct JCSGrid: JCSLayoutElement {
 			)
 
 			let hasFillRows = rowDefs.contains {
-				if case .fill = $0.height { return true }
+				if case .fill = $0.length { return true }
 				return false
 			}
 
 			return .init(
 				measured: measured,
 				columnWidths: columns.values,
+				columnOffsets: columns.offsets,
 				columnSize: columns.size,
 				rowDefs: rowDefs,
 				hasFillColumns: columns.hasFill,
@@ -400,6 +401,7 @@ public struct JCSGrid: JCSLayoutElement {
 			for requestedWidth: CGFloat
 		) -> PreparedLayout {
 			guard !isEmpty else { return prep }
+
 			var measured = prep.measured
 			let preparedColumns = JCSDimension.Applied(
 				values: prep.columnWidths,
@@ -408,7 +410,7 @@ public struct JCSGrid: JCSLayoutElement {
 
 			let columns = JCSDimension.apply(
 				to: cols,
-				dimension: \.width,
+				dimension: \.length,
 				gap: \.gap,
 				available: requestedWidth,
 				prepared: preparedColumns,
@@ -416,7 +418,7 @@ public struct JCSGrid: JCSLayoutElement {
 					preconditionFailure("Prepared columns must not be remeasured.")
 				},
 				didResolve: { c, column, width in
-					guard case .fill = column.width else { return }
+					guard case .fill = column.length else { return }
 					measureColumn(c, width: width, into: &measured)
 				}
 			)
@@ -424,6 +426,7 @@ public struct JCSGrid: JCSLayoutElement {
 			return .init(
 				measured: measured,
 				columnWidths: columns.values,
+				columnOffsets: columns.offsets,
 				columnSize: columns.size,
 				rowDefs: prep.rowDefs,
 				hasFillColumns: prep.hasFillColumns,
@@ -436,16 +439,18 @@ public struct JCSGrid: JCSLayoutElement {
 			requestedHeight: CGFloat
 		) -> CalculatedLayout {
 			guard !isEmpty else { return .init() }
+
 			let columnCount = columnCount
 			let cellCount = cellCount
 
 			let rows = JCSDimension.apply(
 				to: prep.rowDefs,
-				dimension: \.height,
+				dimension: \.length,
 				gap: \.gap,
 				available: requestedHeight,
 				intrinsic: { r, _, _ in
 					var height: CGFloat = 0
+
 					for c in 0..<columnCount {
 						let i = cellIdx(c, r)
 						if i < cellCount {
@@ -456,11 +461,14 @@ public struct JCSGrid: JCSLayoutElement {
 					return height
 				}
 			)
+
 			return .init(
 				measured: prep.measured,
 				columnWidths: prep.columnWidths,
+				columnOffsets: prep.columnOffsets,
 				rowDefs: prep.rowDefs,
 				rowHeights: rows.values,
+				rowOffsets: rows.offsets,
 				size: CGSize(width: prep.columnSize, height: rows.size)
 			)
 		}
@@ -476,11 +484,13 @@ public struct JCSGrid: JCSLayoutElement {
 			for r in 0..<rowCount {
 				let i = cellIdx(c, r)
 				guard i < cellCount else { continue }
+
 				measured[i] = width > 0
 					? cells[i].measure(bounds: CGSize(fixedWidth: width))
 					: .zero
 			}
 		}
+
 
 		internal func draw(_ layout: CalculatedLayout, _ rect: CGRect) {
 			let maxX = rect.maxX
@@ -490,76 +500,79 @@ public struct JCSGrid: JCSLayoutElement {
 			let rowDefs = layout.rowDefs
 
 			if let render = render.col {
-				var x = rect.minX
 				for c in 0..<columnCount {
-					if x > maxX { break }
 					let width = layout.columnWidths[c]
-					let column = cols[c]
-					if width > 0 {
-						let rendering = ColumnRender(
-							spec: self,
-							def: column,
-							c: c,
-							rect: CGRect(x: x, y: rect.minY, width: width, height: layout.size.height)
+					guard width > 0 else { continue }
+
+					let x = rect.minX + layout.columnOffsets[c]
+					if x > maxX { break }
+
+					render(.init(
+						spec: self,
+						def: cols[c],
+						c: c,
+						rect: CGRect(
+							x: x,
+							y: rect.minY,
+							width: width,
+							height: layout.size.height
 						)
-						render(rendering)
-						x += width + column.gap
-					}
+					))
 				}
 			}
+
 			if let render = render.row {
-				var y = rect.minY
 				for r in 0..<rowCount {
-					if y > maxY { break }
 					let height = layout.rowHeights[r]
-					if height > 0 {
-						let row = rowDefs[r]
-						let rendering = RowRender(
-							spec: self,
-							row: row,
-							r: r,
-							rect: CGRect(x: rect.minX, y: y, width: layout.size.width, height: height )
+					guard height > 0 else { continue }
+
+					let y = rect.minY + layout.rowOffsets[r]
+					if y > maxY { break }
+
+					render(.init(
+						spec: self,
+						row: rowDefs[r],
+						r: r,
+						rect: CGRect(
+							x: rect.minX,
+							y: y,
+							width: layout.size.width,
+							height: height
 						)
-						render(rendering)
-						y += height + row.gap
-					}
+					))
 				}
 			}
-			var x = rect.minX
+
 			for c in 0..<columnCount {
-				if x > maxX { break }
 				let width = layout.columnWidths[c]
-				let column = cols[c]
-				if width > 0 {
-					var y = rect.minY
-					for r in 0..<rowCount {
-						if y > maxY { break }
-						let height = layout.rowHeights[r]
-						if height > 0 {
-							let row = rowDefs[r]
-							let i = cellIdx(c, r)
-							let cellOrigin = CGPoint(x: x, y: y)
-							let cellSize = CGSize(width: width, height: height)
-							let contentSize = layout.contentSize(at: i)
-							let alignment = column.align.union(row.align)
-							let cellRect = CGRect(origin: cellOrigin, size: cellSize)
-							let rendering = CellRender(
-								spec: self,
-								def: cell(at: i),
-								c: c,
-								r: r,
-								i: i,
-								rect: cellRect,
-								content: contentSize,
-								alignment: alignment
-							)
-							render.cell(rendering)
-							y += height + row.gap
-						}
-					}
-					x += width + column.gap
+				guard width > 0 else { continue }
+
+				let x = rect.minX + layout.columnOffsets[c]
+				if x > maxX { break }
+
+				for r in 0..<rowCount {
+					let height = layout.rowHeights[r]
+					guard height > 0 else { continue }
+
+					let y = rect.minY + layout.rowOffsets[r]
+					if y > maxY { break }
+
+					let row = rowDefs[r]
+					let i = cellIdx(c, r)
+					let rendering = CellRender(
+						spec: self,
+						def: cell(at: i),
+						c: c,
+						r: r,
+						i: i,
+						rect: CGRect(x: x, y: y, width: width, height: height),
+						content: layout.contentSize(at: i),
+						alignment: cols[c].align.union(row.align)
+					)
+					render.cell(rendering)
 				}
 			}
 		}
+
 	}
 }

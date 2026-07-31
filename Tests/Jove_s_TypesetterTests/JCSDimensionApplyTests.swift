@@ -605,4 +605,44 @@ struct JCSDimensionApplyTests {
 		#expect(result.values == [20])
 	}
 
+
+	@Test("Offsets use gaps only between resolved dimensions")
+	func resolvedOffsets() {
+		let result = apply([
+			Item(.fixed(10), gap: 4),
+			Item(.fixed(0), gap: 50),
+			Item(.fixed(20), gap: 6),
+			Item(.fill())
+		], available: 100)
+
+		#expect(result.values == [10, 0, 20, 60])
+		#expect(result.offsets == [0, 0, 14, 40])
+		#expect(result.size == 100)
+	}
+
+	@Test("Prepared completion regenerates offsets from final values")
+	func preparedOffsets() {
+		let items = [
+			Item(.intrinsic(), gap: 20, intrinsic: 80),
+			Item(.fill())
+		]
+		let prepared = apply(items)
+
+		let result = JCSDimension.apply(
+			to: items,
+			dimension: \.dimension,
+			gap: \.gap,
+			available: 300,
+			prepared: prepared,
+			intrinsic: { _, _, _ in
+				Issue.record("Prepared dimensions must not be remeasured")
+				return 0
+			}
+		)
+
+		#expect(result.values == [80, 200])
+		#expect(result.offsets == [0, 100])
+		#expect(result.size == 300)
+	}
+
 }

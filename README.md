@@ -6,4 +6,4 @@ Value type semantics.
 Declarative Result Builders for compound elements.
 No Choo-choo train builders.
 Measure-once.
-JCSDimension, JCSStack, JCSGrid are the layout workhorses
+JCSGrid is the layout workhorse

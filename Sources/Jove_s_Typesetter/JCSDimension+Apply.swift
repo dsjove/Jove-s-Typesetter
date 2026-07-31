@@ -1,17 +1,23 @@
 import CoreGraphics
 
 extension JCSDimension {
+//TODO: Bug - fills still not computing correctly
 	public struct Applied {
 		public let values: [CGFloat]
+		public let offsets: [CGFloat]
 		public let size: CGFloat
 		public let hasFill: Bool
 
 		public init(
 			values: [CGFloat] = [],
+			offsets: [CGFloat] = [],
 			size: CGFloat = 0,
 			hasFill: Bool = false
 		) {
 			self.values = values
+			self.offsets = offsets.isEmpty
+				? Array(repeating: 0, count: values.count)
+				: offsets
 			self.size = size
 			self.hasFill = hasFill
 		}
@@ -212,24 +218,31 @@ extension JCSDimension {
 			didResolve(index, element, resolved)
 		}
 
+		var offsets = Array(repeating: CGFloat.zero, count: values.count)
 		let size: CGFloat
+
 		if fillConsumesSpace {
 			let resolvedIndices = values.indices.filter { values[$0] > 0 }
-			let resolvedGaps = resolvedIndices
-				.dropLast()
-				.reduce(CGFloat.zero) { result, index in
-					result + max(elements[index][keyPath: gap], 0)
-				}
+			var position: CGFloat = 0
 
-			size = values.reduce(0, +) + resolvedGaps
+			for (positionIndex, index) in resolvedIndices.enumerated() {
+				offsets[index] = position
+				position += values[index]
+
+				if positionIndex < resolvedIndices.count - 1 {
+					position += max(elements[index][keyPath: gap], 0)
+				}
+			}
+
+			size = position
 		} else {
-			// Overlapping values occupy the same axis, so the extent is the
-			// largest resolved value rather than their sum.
+			// Overlapping values all begin at the same origin.
 			size = values.max() ?? 0
 		}
 
 		return .init(
 			values: values,
+			offsets: offsets,
 			size: size,
 			hasFill: !fillIndices.isEmpty
 		)
