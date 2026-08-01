@@ -5,28 +5,47 @@ public extension JCSGrid {
 		horzFlow col: LineDef,
 		rows: Rows = .init(.left),
 		render: Render = .init(),
+		colRender: ((ColumnRender)->())? = nil,
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
 		let cells = cells()
 		self.init(
 			cols: Array(repeating: col, count: cells.count),
 			rows: rows,
-			render: render,
+			render: .init(col: colRender),
 			cells: cells)
 	}
 
 	init(
 		vertFlow col: LineDef,
 		rows: Rows = .init(.centerY),
-		render: Render = .init(),
-		@JCSLayoutElementBuilder cells: ()->[CellDef]
+		@JCSLayoutElementBuilder cells: ()->[CellDef],
+		rowRender: ((RowRender)->())? = nil
 	) {
-print("col \(col.align) row: \(rows.def(0).align)")
 		let cells = cells()
 		self.init(
 			cols: [col],
 			rows: rows,
-			render: render,
+			render: .init(row: rowRender),
+			cells: cells)
+	}
+
+	init(
+		table: Columns,
+		header: LineDef? = nil,
+		rows: Rows = .init(),
+		@JCSLayoutElementBuilder cells: ()->[CellDef],
+		rowRender: ((RowRender)->())? = nil
+	) {
+		let cells = cells()
+		self.init(
+			cols: table,
+			rows: .init(
+				min: rows.min,
+				max: rows.min,
+				{ if let header, $0 == 0 { header } else { rows.def($0) } }
+			),
+			render: .init(row: rowRender),
 			cells: cells)
 	}
 }
@@ -42,6 +61,7 @@ public struct JCSGrid: JCSLayoutElement {
 // TODO: Bug - do copy-on-write for Layout member
 // TODO: Design - have protocol for grid renderer, it supplies intrinsic size and does the draw
 // TODO: Feature - use Gap Struct
+// TODO: Feature - column spans and column mapping
 
 	public enum Layering {
 		case grid
@@ -55,7 +75,7 @@ public struct JCSGrid: JCSLayoutElement {
 		public let gap: CGFloat
 
 		public init(
-			length: JCSDimension = .intrinsic(),
+			_ length: JCSDimension = .intrinsic(),
 			align: JCSAlignment = .left, //Column centric
 			gap: CGFloat = 2.0
 		) {

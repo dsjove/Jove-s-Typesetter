@@ -5,6 +5,7 @@ public struct JCSText: JCSLayoutElement {
 	public let text: String?
 	public let font: UIFont
 	public let color: UIColor
+	public let align: JCSAlignment?
 	public let minLines: Int
 	public let maxLines: Int
 	public let content: NSMutableAttributedString?
@@ -14,21 +15,24 @@ public struct JCSText: JCSLayoutElement {
 		_ text: String?,
 		font: UIFont = UIFont.systemFont(ofSize: 9.0),
 		color: UIColor = UIColor.black,
+		align: JCSAlignment? = nil,
 		lines: Int
 	) {
-		self.init(text, font: font, color: color, minLines: lines, maxLines: lines)
+		self.init(text, font: font, color: color, align: align, minLines: lines, maxLines: lines)
 	}
 
 	public init(
 		_ text: String?,
 		font: UIFont = UIFont.systemFont(ofSize: 9.0),
 		color: UIColor = UIColor.black,
+		align: JCSAlignment? = nil,
 		minLines: Int = 0,
 		maxLines: Int = Int.max
 	) {
 		self.text = text
 		self.font = font
 		self.color = color
+		self.align = align
 		self.minLines = minLines
 		self.maxLines = maxLines
 
@@ -73,6 +77,7 @@ public struct JCSText: JCSLayoutElement {
 		guard let content else { return }
 		var r = allocated
 		//NSAttributedString has alignment built into the attributes
+		let align = self.align ?? align
 		content.addAttribute(
 			.paragraphStyle,
 			value: {

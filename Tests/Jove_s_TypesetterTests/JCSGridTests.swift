@@ -35,10 +35,10 @@ struct JCSGridTests {
 	) -> JCSGrid.Specification {
 		.init(
 			cols: widths.map {
-				.init(length: $0, gap: columnGap)
+				.init($0, gap: columnGap)
 			},
 			rows: .init(def: { _ in
-				.init(length: rowHeight, gap: rowGap)
+				.init(rowHeight, gap: rowGap)
 			}),
 			cells: cells,
 			render: render
@@ -153,9 +153,9 @@ struct JCSGridTests {
 	func intrinsicAndFillRows() {
 		let cells = [TestCell(100, 30), TestCell(100, 500)]
 		let spec = JCSGrid.Specification(
-			cols: [.init(length: .fixed(100), gap: 0)],
+			cols: [.init(.fixed(100), gap: 0)],
 			rows: .init(def: { index in
-				.init(length: index == 0 ? .intrinsic() : .fill(), gap: 10)
+				.init(index == 0 ? .intrinsic() : .fill(), gap: 10)
 			}),
 			cells: cells,
 			render: .init()
