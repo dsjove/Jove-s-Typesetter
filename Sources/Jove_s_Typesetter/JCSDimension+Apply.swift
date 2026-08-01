@@ -1,5 +1,22 @@
 import CoreGraphics
 
+// TODO: Feature - support Gap struct
+public struct Gap {
+	public let min: CGFloat
+	public let edgeFactor: CGFloat
+	public let fixed: Bool
+
+	public init(
+		min: CGFloat = 2.0,
+		edgeFactor: CGFloat = 0.0,
+		fixed: Bool = true
+	) {
+		self.min = min
+		self.edgeFactor = edgeFactor
+		self.fixed = fixed
+	}
+}
+
 extension JCSDimension {
 //TODO: Bug - fills still not computing correctly
 	public struct Applied {

@@ -43,9 +43,11 @@ public struct JCSEmptyDrawable: JCSLayoutElement {
 	public init() {}
 }
 
+public typealias JCSLayoutElements = [any JCSLayoutElement]
+
 @resultBuilder
 public struct JCSLayoutElementBuilder {
-	public typealias Component = [any JCSLayoutElement]
+	public typealias Component = JCSLayoutElements
 
 	public static func buildExpression<T: JCSLayoutElement>(
 		_ expression: T

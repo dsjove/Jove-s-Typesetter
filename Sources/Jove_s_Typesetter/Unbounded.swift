@@ -36,16 +36,6 @@ public extension CGSize {
 	}
 }
 
-public extension Int {
-	func signedDescription(zero: Bool = true) -> String {
-		if (zero && self == 0) || (self > 0) {
-			"+\(self)"
-		} else {
-			"\(self)"
-		}
-	}
-}
-
 public extension CGRect {
 	init(x: CGFloat, y: CGFloat, size: CGSize) {
 		self.init(x: x, y: y, width: size.width, height: size.height)

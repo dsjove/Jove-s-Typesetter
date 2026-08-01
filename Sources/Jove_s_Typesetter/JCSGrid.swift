@@ -1,14 +1,46 @@
 import CoreGraphics
 
+public extension JCSGrid {
+	init(
+		horzFlow col: LineDef,
+		rows: Rows = .init(),
+		render: Render = .init(),
+		@JCSLayoutElementBuilder cells: ()->[CellDef]
+	) {
+		let cells = cells()
+		self.init(
+			cols: Array(repeating: col, count: cells.count),
+			rows: rows,
+			render: render,
+			cells: cells)
+	}
+
+	init(
+		vertFlow col: LineDef,
+		rows: Rows = .init(),
+		render: Render = .init(),
+		@JCSLayoutElementBuilder cells: ()->[CellDef]
+	) {
+		let cells = cells()
+		self.init(
+			cols: [col],
+			rows: rows,
+			render: render,
+			cells: cells)
+	}
+}
+
 public struct JCSGrid: JCSLayoutElement {
+// TODO: Feature - Pagination policies
 // TODO: Feature - Pivot Table
 // TODO: Feature - Layering
 //     grid - existing behavior
 //     wrapped(v) - hits bottom, sets y = 0 and x+=width, measured width needs to account
 //     wrapped(h) - hits right, sets x = 0 and y+=height, measured height needs to account
 //     stacked - JCSGrid intrinsic size is max of cells, drawing changes, all other calcs the same
-//
 // TODO: Bug - do copy-on-write for Layout member
+// TODO: Design - have protocol for grid renderer, it supplies intrinsic size and does the draw
+// TODO: Feature - use Gap Struct
 
 	public enum Layering {
 		case grid
@@ -23,7 +55,7 @@ public struct JCSGrid: JCSLayoutElement {
 
 		public init(
 			length: JCSDimension = .intrinsic(),
-			align: JCSAlignment = .left,
+			align: JCSAlignment = .left, //Column centric
 			gap: CGFloat = 2.0
 		) {
 			self.length = length
@@ -43,7 +75,7 @@ public struct JCSGrid: JCSLayoutElement {
 		public init(
 			min: Int = 0,
 			max: Int = Int.max,
-			def: @escaping (Int) -> LineDef = {_ in .init() }
+			_ def: @escaping (Int) -> LineDef = {_ in .init(align: .top) }
 		) {
 			self.min = min
 			self.max = max
@@ -96,6 +128,7 @@ public struct JCSGrid: JCSLayoutElement {
 			self.row = row
 			self.cell = {
 				if let cell { cell($0) } else { $0.render() }
+				//JCSRect(fill: .clear, stroke: .red, lineWidth: 0.5, radius: 0.0).draw(in: $0.rect)
 			}
 		}
 	}
@@ -105,57 +138,15 @@ public struct JCSGrid: JCSLayoutElement {
 
 // API
 	public init(
-		horzFlow col: LineDef,
-		rows: Rows = .init(),
-		cells: Cells
-	) {
-		self.init(
-			cols: Array(repeating: col, count: cells.count),
-			rows: rows,
-			cells: cells)
-	}
-
-	public init(
-		horzFlow col: LineDef,
-		rows: Rows = .init(),
-		@JCSLayoutElementBuilder cells: ()->[CellDef]
-	) {
-		self.init(
-			horzFlow: col,
-			rows: rows,
-			cells: cells())
-	}
-
-	public init(
-		vertFlow col: LineDef,
-		rows: Rows = .init(),
-		cells: Cells
-	) {
-		self.init(
-			cols: [col],
-			rows: rows,
-			cells: cells)
-	}
-
-	public init(
-		vertFlow col: LineDef,
-		rows: Rows = .init(),
-		@JCSLayoutElementBuilder cells: ()->[CellDef]
-	) {
-		self.init(
-			vertFlow: col,
-			rows: rows,
-			cells: cells())
-	}
-
-	public init(
 		cols: Columns,
 		rows: Rows = .init(),
+		render: Render = .init(),
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
 		self.init(
 			cols: cols,
 			rows: rows,
+			render: render,
 			cells: cells())
 	}
 
@@ -573,6 +564,5 @@ public struct JCSGrid: JCSLayoutElement {
 				}
 			}
 		}
-
 	}
 }
