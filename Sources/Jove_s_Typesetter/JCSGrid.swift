@@ -3,7 +3,7 @@ import CoreGraphics
 public extension JCSGrid {
 	init(
 		horzFlow col: LineDef,
-		rows: Rows = .init(.left),
+		rows: Rows = .init(align: .left),
 		render: Render = .init(),
 		colRender: ((ColumnRender)->())? = nil,
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
@@ -18,7 +18,7 @@ public extension JCSGrid {
 
 	init(
 		vertFlow col: LineDef,
-		rows: Rows = .init(.centerY),
+		rows: Rows = .init(align: .centerY),
 		@JCSLayoutElementBuilder cells: ()->[CellDef],
 		rowRender: ((RowRender)->())? = nil
 	) {
@@ -42,8 +42,8 @@ public extension JCSGrid {
 			cols: table,
 			rows: .init(
 				min: rows.min,
-				max: rows.min,
-				{ if let header, $0 == 0 { header } else { rows.def($0) } }
+				max: rows.max,
+				def: { if let header, $0 == 0 { header } else { rows.def($0) } }
 			),
 			render: .init(row: rowRender),
 			cells: cells)
@@ -93,14 +93,26 @@ public struct JCSGrid: JCSLayoutElement {
 		let max: Int
 		let def: (Int)->LineDef
 
-		public init(_ align: JCSAlignment) {
-			self.init() { _ in .init(align: align) }
+		public init(
+			_ length: JCSDimension = .intrinsic(),
+			align: JCSAlignment = .top,
+			gap: CGFloat = 2.0
+		) {
+			self.init() { _ in .init(length, align: align, gap: gap) }
 		}
 
 		public init(
 			min: Int = 0,
 			max: Int = Int.max,
-			_ def: @escaping (Int) -> LineDef = {_ in .init(align: .top) }
+			_ def: LineDef
+		) {
+			self.init() { _ in def }
+		}
+
+		public init(
+			min: Int = 0,
+			max: Int = Int.max,
+			def: @escaping (Int) -> LineDef
 		) {
 			self.min = min
 			self.max = max
@@ -153,7 +165,7 @@ public struct JCSGrid: JCSLayoutElement {
 			self.row = row
 			self.cell = {
 				if let cell { cell($0) } else { $0.render() }
-				//JCSRect(fill: .clear, stroke: .red, lineWidth: 0.5, radius: 0.0).draw(in: $0.rect)
+				JCSRect(fill: .clear, stroke: .red.withAlphaComponent(0.25), lineWidth: 0.5, radius: 0.0).draw(in: $0.rect)
 			}
 		}
 	}
