@@ -3,7 +3,7 @@ import CoreGraphics
 public extension JCSGrid {
 	init(
 		horzFlow col: LineDef,
-		rows: Rows = .init(),
+		rows: Rows = .init(.left),
 		render: Render = .init(),
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
@@ -17,10 +17,11 @@ public extension JCSGrid {
 
 	init(
 		vertFlow col: LineDef,
-		rows: Rows = .init(),
+		rows: Rows = .init(.centerY),
 		render: Render = .init(),
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
+print("col \(col.align) row: \(rows.def(0).align)")
 		let cells = cells()
 		self.init(
 			cols: [col],
@@ -71,6 +72,10 @@ public struct JCSGrid: JCSLayoutElement {
 		let min: Int
 		let max: Int
 		let def: (Int)->LineDef
+
+		public init(_ align: JCSAlignment) {
+			self.init() { _ in .init(align: align) }
+		}
 
 		public init(
 			min: Int = 0,

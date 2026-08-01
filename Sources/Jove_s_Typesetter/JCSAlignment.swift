@@ -30,16 +30,20 @@ public struct JCSAlignment: OptionSet, Sendable, Codable, CustomStringConvertibl
 			x = rect.minX + (rect.width - size.width) * 0.5
 		} else if contains(.right) {
 			x = rect.maxX - size.width
-		} else {
+		} else if contains(.left) {
 			x = rect.minX
+		} else {
+			x = rect.minX // assume left
 		}
 		let y: CGFloat
 		if contains(.centerY) {
 			y = rect.minY + (rect.height - size.height) * 0.5
 		} else if contains(.bottom) {
 			y = rect.maxY - size.height
-		} else {
+		} else if contains(.top) {
 			y = rect.minY
+		} else {
+			y = rect.minY // assume top
 		}
 		return .init(x: x, y: y, size: size)
 	}
@@ -53,16 +57,20 @@ public struct JCSAlignment: OptionSet, Sendable, Codable, CustomStringConvertibl
 			x = "Center"
 		} else if contains(.right) {
 			x = "Right"
-		} else {
+		} else if contains(.left) {
 			x = "Left"
+		} else {
+			x = ""
 		}
 		let y: String
 		if contains(.centerY) {
 			y = "Center"
 		} else if contains(.bottom) {
 			y = "Bottom"
-		} else {
+		} else if contains(.top) {
 			y = "Top"
+		} else {
+			y = ""
 		}
 		return "\(x)\(y)"
 	}
