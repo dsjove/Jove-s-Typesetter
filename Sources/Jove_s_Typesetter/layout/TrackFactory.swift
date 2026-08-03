@@ -15,7 +15,7 @@ public struct TrackFactory {
 		self.init(min: min, max: max) { _ in .init(length, align: align, gap: gap) }
 	}
 
-	public init(x
+	public init(
 		min: Int = 0,
 		max: Int = Int.max,
 		_ def: Track

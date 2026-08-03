@@ -129,7 +129,7 @@ extension TrackSize {
 
 		let activeIndices = elements.indices.filter { index in
 			switch elements[index][keyPath: dimension] {
-			case .fill(let fraction):
+			case .fill(let fraction, _, _):
 				return fraction == nil || fraction! > 0
 			default:
 				return values[index] > 0
@@ -163,14 +163,14 @@ extension TrackSize {
 		}
 
 		let automaticFillCount = fillIndices.reduce(into: 0) { count, index in
-			if case .fill(nil) = elements[index][keyPath: dimension] {
+			if case .fill(nil, _, _) = elements[index][keyPath: dimension] {
 				count += 1
 			}
 		}
 
 		let explicitFractionTotal = fillIndices.reduce(CGFloat.zero) { result, index in
 			guard
-				case .fill(let fraction?) = elements[index][keyPath: dimension],
+				case .fill(let fraction?, _, _) = elements[index][keyPath: dimension],
 				fraction > 0
 			else {
 				return result
@@ -199,7 +199,7 @@ extension TrackSize {
 		for index in fillIndices {
 			let element = elements[index]
 
-			guard case .fill(let fraction) = element[keyPath: dimension] else {
+			guard case .fill(let fraction, _, _) = element[keyPath: dimension] else {
 				continue
 			}
 
