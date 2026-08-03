@@ -5,7 +5,7 @@ public struct JCSText: JCSLayoutElement {
 	public let text: String?
 	public let font: UIFont
 	public let color: UIColor
-	public let align: JCSAlignment?
+	public let align: Alignment?
 	public let minLines: Int
 	public let maxLines: Int
 	public let content: NSMutableAttributedString?
@@ -15,7 +15,7 @@ public struct JCSText: JCSLayoutElement {
 		_ text: String?,
 		font: UIFont = UIFont.systemFont(ofSize: 9.0),
 		color: UIColor = UIColor.black,
-		align: JCSAlignment? = nil,
+		align: Alignment? = nil,
 		lines: Int
 	) {
 		self.init(text, font: font, color: color, align: align, minLines: lines, maxLines: lines)
@@ -25,7 +25,7 @@ public struct JCSText: JCSLayoutElement {
 		_ text: String?,
 		font: UIFont = UIFont.systemFont(ofSize: 9.0),
 		color: UIColor = UIColor.black,
-		align: JCSAlignment? = nil,
+		align: Alignment? = nil,
 		minLines: Int = 0,
 		maxLines: Int = Int.max
 	) {
@@ -73,7 +73,7 @@ public struct JCSText: JCSLayoutElement {
 		return measured
 	}
 
-	public func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment) {
+	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
 		guard let content else { return }
 		var r = allocated
 		//NSAttributedString has alignment built into the attributes

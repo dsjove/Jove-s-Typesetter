@@ -1,23 +1,6 @@
 import CoreGraphics
 
-// TODO: Feature - support Gap struct
-public struct Gap {
-	public let min: CGFloat
-	public let edgeFactor: CGFloat
-	public let fixed: Bool
-
-	public init(
-		min: CGFloat = 2.0,
-		edgeFactor: CGFloat = 0.0,
-		fixed: Bool = true
-	) {
-		self.min = min
-		self.edgeFactor = edgeFactor
-		self.fixed = fixed
-	}
-}
-
-extension JCSDimension {
+extension TrackSize {
 //TODO: Bug - fills still not computing correctly
 	public struct Applied {
 		public let values: [CGFloat]
@@ -42,7 +25,7 @@ extension JCSDimension {
 
 	public static func apply<Element>(
 		to elements: [Element],
-		dimension: KeyPath<Element, JCSDimension>,
+		dimension: KeyPath<Element, TrackSize>,
 		gap: KeyPath<Element, CGFloat>,
 		available: CGFloat,
 		fillConsumesSpace: Bool = true,

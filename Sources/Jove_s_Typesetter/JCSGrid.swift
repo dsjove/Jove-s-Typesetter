@@ -2,8 +2,8 @@ import CoreGraphics
 
 public extension JCSGrid {
 	init(
-		horzFlow col: LineDef,
-		rows: Rows = .init(align: .left),
+		horzFlow col: Track,
+		rows: TrackFactory = .init(align: .left),
 		render: Render = .init(),
 		colRender: ((ColumnRender)->())? = nil,
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
@@ -17,8 +17,8 @@ public extension JCSGrid {
 	}
 
 	init(
-		vertFlow col: LineDef,
-		rows: Rows = .init(align: .centerY),
+		vertFlow col: Track,
+		rows: TrackFactory = .init(align: .centerY),
 		@JCSLayoutElementBuilder cells: ()->[CellDef],
 		rowRender: ((RowRender)->())? = nil
 	) {
@@ -32,8 +32,8 @@ public extension JCSGrid {
 
 	init(
 		table: Columns,
-		header: LineDef? = nil,
-		rows: Rows = .init(),
+		header: Track? = nil,
+		rows: TrackFactory = .init(),
 		@JCSLayoutElementBuilder cells: ()->[CellDef],
 		rowRender: ((RowRender)->())? = nil
 	) {
@@ -63,62 +63,12 @@ public struct JCSGrid: JCSLayoutElement {
 // TODO: Feature - use Gap Struct
 // TODO: Feature - column spans and column mapping
 
-	public enum Layering {
-		case grid
-		case wrapped(axis: JCSAxis)
-		case stacked
-	}
-
-	public struct LineDef {
-		public let length: JCSDimension
-		public let align: JCSAlignment
-		public let gap: CGFloat
-
-		public init(
-			_ length: JCSDimension = .intrinsic(),
-			align: JCSAlignment = .left, //Column centric
-			gap: CGFloat = 2.0
-		) {
-			self.length = length
-			self.align = align
-			self.gap = gap
-		}
-	}
+	
 
 // Columns
-	public typealias Columns = [LineDef]
+	public typealias Columns = [Track]
 
-	public struct Rows {
-		let min: Int
-		let max: Int
-		let def: (Int)->LineDef
-
-		public init(
-			_ length: JCSDimension = .intrinsic(),
-			align: JCSAlignment = .top,
-			gap: CGFloat = 2.0
-		) {
-			self.init() { _ in .init(length, align: align, gap: gap) }
-		}
-
-		public init(
-			min: Int = 0,
-			max: Int = Int.max,
-			_ def: LineDef
-		) {
-			self.init(min: min, max: max) { _ in def }
-		}
-
-		public init(
-			min: Int = 0,
-			max: Int = Int.max,
-			def: @escaping (Int) -> LineDef
-		) {
-			self.min = min
-			self.max = max
-			self.def = def
-		}
-	}
+	
 
 // Cells
 	public typealias CellDef = JCSLayoutElement
@@ -127,13 +77,13 @@ public struct JCSGrid: JCSLayoutElement {
 // Rendering
 	public struct ColumnRender {
 		public let spec: Specification
-		public let def: LineDef
+		public let def: Track
 		public let c: Int
 		public let rect: CGRect
 	}
 	public struct RowRender {
 		public let spec: Specification
-		public let row: LineDef
+		public let row: Track
 		public let r: Int
 		public let rect: CGRect
 	}
@@ -145,7 +95,7 @@ public struct JCSGrid: JCSLayoutElement {
 		public let i: Int
 		public let rect: CGRect
 		public let content: CGSize?
-		public let alignment: JCSAlignment
+		public let alignment: Alignment
 
 		public func render() {
 			def?.draw(in: rect, measured: content, align: alignment);
@@ -176,7 +126,7 @@ public struct JCSGrid: JCSLayoutElement {
 // API
 	public init(
 		cols: Columns,
-		rows: Rows = .init(),
+		rows: TrackFactory = .init(),
 		render: Render = .init(),
 		@JCSLayoutElementBuilder cells: ()->[CellDef]
 	) {
@@ -191,7 +141,7 @@ public struct JCSGrid: JCSLayoutElement {
 	// This is not a reactive grid where columns/rows/cells have identity.
 	public init(
 		cols: Columns,
-		rows: Rows = .init(),
+		rows: TrackFactory = .init(),
 		render: Render = .init(),
 		cells: Cells
 	) {
@@ -203,7 +153,7 @@ public struct JCSGrid: JCSLayoutElement {
 		layout.calculateLayout(for: bounds).size
 	}
 
-	public func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment) {
+	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
 		layout.draw(allocated, measured, align)
 	}
 
@@ -255,7 +205,7 @@ public struct JCSGrid: JCSLayoutElement {
 			return calculated
 		}
 
-		func draw(_ allocated: CGRect, _ measured: CGSize, _ align: JCSAlignment) {
+		func draw(_ allocated: CGRect, _ measured: CGSize, _ align: Alignment) {
 //TODO: Bug rect not always correct
 			let rect = align.apply(size: intrinsicSize, in: allocated)
 			spec.draw(calculateLayout(for: measured), rect)
@@ -266,7 +216,7 @@ public struct JCSGrid: JCSLayoutElement {
 		var measured: [CGSize] = []
 		var columnWidths: [CGFloat] = []
 		var columnOffsets: [CGFloat] = []
-		var rowDefs: [LineDef] = []
+		var rowDefs: [Track] = []
 		var rowHeights: [CGFloat] = []
 		var rowOffsets: [CGFloat] = []
 		var size: CGSize = .zero
@@ -281,7 +231,7 @@ public struct JCSGrid: JCSLayoutElement {
 		var columnWidths: [CGFloat] = []
 		var columnOffsets: [CGFloat] = []
 		var columnSize: CGFloat = 0
-		var rowDefs: [LineDef] = []
+		var rowDefs: [Track] = []
 		var hasFillColumns: Bool = false
 		var hasFillRows: Bool = false
 
@@ -291,14 +241,14 @@ public struct JCSGrid: JCSLayoutElement {
 	}
 
 	public struct Specification {
-		public let cols: [LineDef]
-		public let rows: Rows
+		public let cols: [Track]
+		public let rows: TrackFactory
 		public let cells: Cells
 		public let render: Render
 
 		public init(
-			cols: [LineDef],
-			rows: Rows,
+			cols: [Track],
+			rows: TrackFactory,
 			cells: Cells,
 			render: Render
 		) {
@@ -346,7 +296,7 @@ public struct JCSGrid: JCSLayoutElement {
 				count: columnCount
 			)
 
-			let columns = JCSDimension.apply(
+			let columns = TrackSize.apply(
 				to: cols,
 				dimension: \.length,
 				gap: \.gap,
@@ -431,12 +381,12 @@ public struct JCSGrid: JCSLayoutElement {
 			guard !isEmpty else { return prep }
 
 			var measured = prep.measured
-			let preparedColumns = JCSDimension.Applied(
+			let preparedColumns = TrackSize.Applied(
 				values: prep.columnWidths,
 				hasFill: prep.hasFillColumns
 			)
 
-			let columns = JCSDimension.apply(
+			let columns = TrackSize.apply(
 				to: cols,
 				dimension: \.length,
 				gap: \.gap,
@@ -471,7 +421,7 @@ public struct JCSGrid: JCSLayoutElement {
 			let columnCount = columnCount
 			let cellCount = cellCount
 
-			let rows = JCSDimension.apply(
+			let rows = TrackSize.apply(
 				to: prep.rowDefs,
 				dimension: \.length,
 				gap: \.gap,

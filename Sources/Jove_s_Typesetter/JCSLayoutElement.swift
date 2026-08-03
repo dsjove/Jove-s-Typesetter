@@ -1,11 +1,8 @@
 import CoreGraphics
 
-public protocol JCSLayoutElement {
-	// required content size, do not return unbounded values
-	func measure(bounds: CGSize) -> CGSize
-
+public protocol JCSLayoutElement: TrackElement {
 	// allocated and contentSize with unbounded values is undefined
-	func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment)
+	func draw(in allocated: CGRect, measured: CGSize, align: Alignment)
 
 	var page: Pagination { get }
 }
@@ -18,7 +15,7 @@ public extension JCSLayoutElement {
 	}
 
 	// Does not measure, uses alloacted size if no measurement supplied
-	func draw(in allocated: CGRect, measured: CGSize? = nil, align: JCSAlignment = .leftTop) {
+	func draw(in allocated: CGRect, measured: CGSize? = nil, align: Alignment = .leftTop) {
 		draw(in: allocated, measured: measured ?? allocated.size, align: align)
 	}
 
@@ -38,7 +35,7 @@ public extension JCSLayoutElement {
 
 public struct JCSEmptyDrawable: JCSLayoutElement {
 	public func measure(bounds: CGSize) -> CGSize { .zero }
-	public func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment) {}
+	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {}
 
 	public init() {}
 }

@@ -1,6 +1,6 @@
 import CoreGraphics
 
-public enum JCSDimension: CustomStringConvertible {
+public enum TrackSize: CustomStringConvertible {
 	case fixed(_ value: CGFloat)
 	case intrinsic(bound: CGFloat = .unbounded, min: CGFloat? = nil)
 	case fill(_ fraction: CGFloat? = nil)

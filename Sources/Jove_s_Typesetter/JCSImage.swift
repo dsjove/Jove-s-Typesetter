@@ -26,7 +26,7 @@ public struct JCSImage: JCSLayoutElement {
 		aspect.apply(size: image?.size ?? .zero, in: bounds)
 	}
 
-	public func draw(in allocated: CGRect, measured: CGSize, align: JCSAlignment) {
+	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
 		if let image = image {
 			let sized = aspect.apply(size: image.size, in: allocated.size)
 			let placed = align.apply(size: sized, in: allocated)
