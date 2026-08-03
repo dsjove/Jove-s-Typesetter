@@ -106,7 +106,7 @@ public struct JCSGrid: JCSLayoutElement {
 			max: Int = Int.max,
 			_ def: LineDef
 		) {
-			self.init() { _ in def }
+			self.init(min: min, max: max) { _ in def }
 		}
 
 		public init(
