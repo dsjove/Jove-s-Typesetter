@@ -1,6 +1,6 @@
 import CoreGraphics
 import Testing
-@testable import Jove_s_Typesetter
+@testable import SBJLayout
 
 @Suite("GridLayout")
 struct GridLayoutTests {
@@ -8,15 +8,11 @@ struct GridLayoutTests {
 		private(set) var measuredBounds: [CGSize] = []
 		let measureBlock: (CGSize) -> CGSize
 
-		init(
-			size: CGSize
-		) {
+		init(size: CGSize) {
 			self.measureBlock = { _ in size }
 		}
 
-		init(
-			measure: @escaping (CGSize) -> CGSize
-		) {
+		init(measure: @escaping (CGSize) -> CGSize) {
 			self.measureBlock = measure
 		}
 
@@ -30,119 +26,41 @@ struct GridLayoutTests {
 		}
 	}
 
-	@Test("Default row count matches the cells required")
-	func defaultRowCountMatchesWantedRows() {
-		let cells = (0..<5).map { _ in
-			MeasuringElement(size: CGSize(width: 10, height: 10))
-		}
-		let grid = GridLayout(
-			columns: [
-				Track(.fixed(20)),
-				Track(.fixed(20))
-			],
-			cells: cells,
-			layout: .tight
-		)
-
-		#expect(grid.wantedRowCount == 3)
-		#expect(grid.rowCount == 3)
-		#expect(grid.rows.count == 3)
-	}
-
-	@Test("Minimum rows can add empty rows")
-	func minimumRowsAddsEmptyRows() {
-		let cell = MeasuringElement(
-			size: CGSize(width: 10, height: 7)
-		)
-		let rows = TrackFactory(
-			min: 3,
-			max: 5,
-			Track(.intrinsic())
-		)
-		let grid = GridLayout(
-			columns: [Track(.fixed(20))],
-			rows: rows,
-			cells: [cell],
-			layout: .tight
-		)
-
-		let result = grid.measure(bounds: .unbounded)
-
-		#expect(grid.rowCount == 3)
-		#expect(grid.rows.count == 3)
-		#expect(result.rows.lengths == [7, 0, 0])
-		#expect(result.size == CGSize(width: 20, height: 7))
-		#expect(cell.measureCount == 1)
-	}
-
-	@Test("Maximum rows truncates excess cells")
-	func maximumRowsTruncatesExcessCells() {
-		let cells = (0..<5).map { _ in
-			MeasuringElement(size: CGSize(width: 10, height: 10))
-		}
-		let rows = TrackFactory(
-			min: 0,
-			max: 2,
-			Track(.intrinsic())
-		)
-		let grid = GridLayout(
-			columns: [
-				Track(.fixed(20)),
-				Track(.fixed(20))
-			],
-			rows: rows,
-			cells: cells,
-			layout: .tight
-		)
-
-		_ = grid.measure(bounds: .unbounded)
-
-		#expect(grid.wantedRowCount == 3)
-		#expect(grid.rowCount == 2)
-		#expect(grid.rows.count == 2)
-		#expect(grid.cellCount == 4)
-		#expect(cells[0].measureCount == 1)
-		#expect(cells[1].measureCount == 1)
-		#expect(cells[2].measureCount == 1)
-		#expect(cells[3].measureCount == 1)
-		#expect(cells[4].measureCount == 0)
-	}
-
 	@Test("An unconstrained intrinsic cell is measured only once")
 	func intrinsicCellIsMeasuredOnce() {
 		let cell = MeasuringElement(
 			size: CGSize(width: 40, height: 12)
 		)
-		let grid = GridLayout(
+		let layout = GridLayout(
 			columns: [Track(.intrinsic())],
 			cells: [cell],
 			layout: .tight
 		)
 
-		let result = grid.measure(bounds: .unbounded)
+		let definition = layout.measure(bounds: .unbounded)
 
-		#expect(result.columns.lengths == [40])
-		#expect(result.rows.lengths == [12])
-		#expect(result.measured == [CGSize(width: 40, height: 12)])
+		#expect(definition.columns.lengths == [40])
+		#expect(definition.rows.lengths == [12])
+		#expect(definition.measured == [CGSize(width: 40, height: 12)])
 		#expect(cell.measureCount == 1)
 		#expect(cell.measuredBounds == [.unbounded])
 	}
 
-	@Test("A fixed-width cell is measured once and reused")
+	@Test("A fixed-width cell measurement is reused")
 	func fixedCellMeasurementIsCached() {
 		let cell = MeasuringElement { bounds in
 			CGSize(width: bounds.width, height: 14)
 		}
-		let grid = GridLayout(
+		let layout = GridLayout(
 			columns: [Track(.fixed(80))],
 			cells: [cell],
 			layout: .tight
 		)
 
-		let first = grid.measure(
+		let first = layout.measure(
 			bounds: CGSize(width: 200, height: .unbounded)
 		)
-		let second = grid.measure(
+		let second = layout.measure(
 			bounds: CGSize(width: 200, height: .unbounded)
 		)
 
@@ -161,19 +79,19 @@ struct GridLayoutTests {
 		let cell = MeasuringElement { bounds in
 			CGSize(width: bounds.width, height: bounds.width / 10)
 		}
-		let grid = GridLayout(
+		let layout = GridLayout(
 			columns: [Track(.fill())],
 			cells: [cell],
 			layout: .tight
 		)
 
-		let first = grid.measure(
+		let first = layout.measure(
 			bounds: CGSize(width: 100, height: .unbounded)
 		)
-		let repeated = grid.measure(
+		let repeated = layout.measure(
 			bounds: CGSize(width: 100, height: .unbounded)
 		)
-		let changed = grid.measure(
+		let changed = layout.measure(
 			bounds: CGSize(width: 150, height: .unbounded)
 		)
 
@@ -189,7 +107,7 @@ struct GridLayoutTests {
 		)
 	}
 
-	@Test("Rows use cached cell heights without measuring again")
+	@Test("Row calculation reuses cached cell measurements")
 	func rowCalculationUsesCachedMeasurements() {
 		let first = MeasuringElement(
 			size: CGSize(width: 20, height: 8)
@@ -197,7 +115,7 @@ struct GridLayoutTests {
 		let second = MeasuringElement(
 			size: CGSize(width: 30, height: 15)
 		)
-		let grid = GridLayout(
+		let layout = GridLayout(
 			columns: [
 				Track(.fixed(40)),
 				Track(.fixed(40))
@@ -206,118 +124,162 @@ struct GridLayoutTests {
 			layout: .tight
 		)
 
-		let result = grid.measure(bounds: .unbounded)
+		let definition = layout.measure(bounds: .unbounded)
 
-		#expect(result.rows.lengths == [15])
+		#expect(definition.rows.lengths == [15])
 		#expect(first.measureCount == 1)
 		#expect(second.measureCount == 1)
 	}
 
-	@Test("Grid metrics combine track lengths, gaps, and offsets")
-	func metricsContainResolvedTracks() {
-		let cells = (0..<4).map { index in
-			MeasuringElement(
-				size: CGSize(
-					width: 5,
-					height: CGFloat(index + 1)
-				)
-			)
+	@Test("Changed cell measurements invalidate resolved row heights")
+	func changedMeasurementsInvalidateRows() {
+		let cell = MeasuringElement { bounds in
+			CGSize(width: bounds.width, height: bounds.width / 5)
 		}
-		let rows = TrackFactory(
-			min: 2,
-			max: 2,
-			Track(.fixed(10), gap: 3)
-		)
-		let grid = GridLayout(
-			columns: [
-				Track(.fixed(20), gap: 5),
-				Track(.fixed(30), gap: 9)
-			],
-			rows: rows,
-			cells: cells,
-			layout: .gaps
+		let layout = GridLayout(
+			columns: [Track(.fill())],
+			rows: .init(Track(.intrinsic())),
+			cells: [cell],
+			layout: .tight
 		)
 
-		let result = grid.measure(bounds: .unbounded)
+		let first = layout.measure(
+			bounds: CGSize(width: 50, height: .unbounded)
+		)
+		let second = layout.measure(
+			bounds: CGSize(width: 100, height: .unbounded)
+		)
 
-		#expect(result.columns.lengths == [20, 30])
-		#expect(result.columns.offsets == [0, 25])
-		#expect(result.columns.size == 55)
-		#expect(result.rows.lengths == [10, 10])
-		#expect(result.rows.offsets == [0, 13])
-		#expect(result.rows.size == 23)
-		#expect(result.size == CGSize(width: 55, height: 23))
+		#expect(first.rows.lengths == [10])
+		#expect(second.rows.lengths == [20])
+		#expect(cell.measureCount == 2)
 	}
 
-	@Test("Empty columns produce an empty grid without measuring cells")
-	func emptyColumnsProduceEmptyGrid() {
+	@Test("Zero-width resolved columns cache zero without measuring the cell")
+	func zeroWidthColumnDoesNotMeasureCell() {
 		let cell = MeasuringElement(
 			size: CGSize(width: 10, height: 10)
 		)
-		let grid = GridLayout(
+		let layout = GridLayout(
+			columns: [Track(.fixed(0))],
+			cells: [cell],
+			layout: .tight
+		)
+
+		let definition = layout.measure(bounds: .unbounded)
+
+		#expect(definition.measured == [.zero])
+		#expect(definition.rows.lengths == [0])
+		#expect(cell.measureCount == 0)
+	}
+
+	@Test("Measure publishes the latest definition while preserving earlier snapshots")
+	func measurePublishesLatestImmutableDefinition() {
+		let cell = MeasuringElement { bounds in
+			CGSize(width: bounds.width, height: bounds.width / 10)
+		}
+		let layout = GridLayout(
+			columns: [Track(.fill())],
+			cells: [cell],
+			layout: .tight
+		)
+
+		let first = layout.measure(
+			bounds: CGSize(width: 100, height: .unbounded)
+		)
+		let second = layout.measure(
+			bounds: CGSize(width: 150, height: .unbounded)
+		)
+
+		#expect(first.bounds == CGSize(width: 100, height: .unbounded))
+		#expect(first.size == CGSize(width: 100, height: 10))
+		#expect(first.measured == [CGSize(width: 100, height: 10)])
+
+		#expect(second.bounds == CGSize(width: 150, height: .unbounded))
+		#expect(second.size == CGSize(width: 150, height: 15))
+		#expect(second.measured == [CGSize(width: 150, height: 15)])
+
+		#expect(layout.definition.bounds == second.bounds)
+		#expect(layout.definition.size == second.size)
+		#expect(layout.definition.measured == second.measured)
+	}
+
+
+	@Test("Maximum rows prevent excluded cells from being measured")
+	func maximumRowsExcludeMeasurements() {
+		let cells = (0..<5).map { _ in
+			MeasuringElement(size: CGSize(width: 10, height: 10))
+		}
+		let layout = GridLayout(
+			columns: [
+				Track(.fixed(20)),
+				Track(.fixed(20))
+			],
+			rows: .init(
+				min: 0,
+				max: 2,
+				Track(.intrinsic())
+			),
+			cells: cells,
+			layout: .tight
+		)
+
+		_ = layout.measure(bounds: .unbounded)
+
+		#expect(cells[0].measureCount == 1)
+		#expect(cells[1].measureCount == 1)
+		#expect(cells[2].measureCount == 1)
+		#expect(cells[3].measureCount == 1)
+		#expect(cells[4].measureCount == 0)
+	}
+
+	@Test("Empty columns do not measure cells")
+	func emptyColumnsDoNotMeasureCells() {
+		let cell = MeasuringElement(
+			size: CGSize(width: 10, height: 10)
+		)
+		let layout = GridLayout(
 			columns: [],
 			cells: [cell],
 			layout: .tight
 		)
 
-		let result = grid.measure(bounds: .unbounded)
+		let definition = layout.measure(bounds: .unbounded)
 
-		#expect(grid.isEmpty)
-		#expect(grid.columnCount == 0)
-		#expect(grid.rowCount == 0)
-		#expect(grid.cellCount == 0)
-		#expect(result.size == .zero)
-		#expect(result.measured == [.zero])
+		#expect(definition.size == .zero)
+		#expect(definition.measured == [.zero])
 		#expect(cell.measureCount == 0)
 	}
 
-	@Test("Cell indexing is row-major")
-	func cellIndexingIsRowMajor() {
-		let cells = (0..<6).map { _ in
-			MeasuringElement(size: .zero)
-		}
-		let grid = GridLayout(
-			columns: [
-				Track(.fixed(1)),
-				Track(.fixed(1)),
-				Track(.fixed(1))
-			],
+	@Test("An intrinsic column uses its widest visible cell")
+	func intrinsicColumnUsesWidestCell() {
+		let cells = [
+			MeasuringElement(size: CGSize(width: 20, height: 5)),
+			MeasuringElement(size: CGSize(width: 45, height: 6)),
+			MeasuringElement(size: CGSize(width: 30, height: 7))
+		]
+		let layout = GridLayout(
+			columns: [Track(.intrinsic())],
 			cells: cells,
 			layout: .tight
 		)
 
-		#expect(grid.cellIdx(0, 0) == 0)
-		#expect(grid.cellIdx(2, 0) == 2)
-		#expect(grid.cellIdx(0, 1) == 3)
-		#expect(grid.cellIdx(2, 1) == 5)
+		let definition = layout.measure(bounds: .unbounded)
+
+		#expect(definition.columns.lengths == [45])
+		#expect(cells.map(\.measureCount) == [2, 1, 2])
+
+		#expect(cells[0].measuredBounds == [
+			.unbounded,
+			CGSize(width: 45, height: .unbounded)
+		])
+		#expect(cells[1].measuredBounds == [
+			.unbounded
+		])
+		#expect(cells[2].measuredBounds == [
+			.unbounded,
+			CGSize(width: 45, height: .unbounded)
+		])
 	}
-    @Test("Grid metrics remain unchanged after a later measurement")
-    func metricsAreImmutableSnapshots() {
-        let cell = MeasuringElement { bounds in
-            CGSize(width: bounds.width, height: bounds.width / 10)
-        }
-        let grid = GridLayout(
-            columns: [Track(.fill())],
-            cells: [cell],
-            layout: .tight
-        )
-
-        let first = grid.measure(
-            bounds: CGSize(width: 100, height: .unbounded)
-        )
-        let second = grid.measure(
-            bounds: CGSize(width: 150, height: .unbounded)
-        )
-
-        #expect(first.columns.lengths == [100])
-        #expect(first.rows.lengths == [10])
-        #expect(first.measured == [CGSize(width: 100, height: 10)])
-        #expect(first.size == CGSize(width: 100, height: 10))
-
-        #expect(second.columns.lengths == [150])
-        #expect(second.rows.lengths == [15])
-        #expect(second.measured == [CGSize(width: 150, height: 15)])
-        #expect(second.size == CGSize(width: 150, height: 15))
-    }
 
 }

@@ -5,7 +5,6 @@ import CoreGraphics
 // TODO: Feature - Wrapping
 //     wrapped(v) - hits bottom, sets y = 0 and x+=width, measured width needs to account
 //     wrapped(h) - hits right, sets x = 0 and y+=height, measured height needs to account
-// TODO: Bug - Grid is a value type but copies share this mutable Layout. Copy-on-write
 
 public extension Grid {
 //MARK: Convenience inits
@@ -57,15 +56,16 @@ public extension Grid {
 	}
 }
 
-public extension GridLayout.CellIteration where GridLayout.Cell == TrackedElement {
+public extension GridDefinition<TrackedElement>.CellIteration {
 	func render() {
-		cell?.element.draw(in: rect, measured: content, align: alignment);
+		cell?.element.draw(in: rect, measured: content, align: alignment)
 	}
 }
 
 public struct Grid: JCSLayoutElement {
 //MARK: Types
 	public typealias Layout = GridLayout<TrackedElement>
+	public typealias Definition = GridDefinition<TrackedElement>
 	public typealias Column = Track
 	public typealias Columns = [Column]
 	public typealias Row = Track
@@ -73,9 +73,9 @@ public struct Grid: JCSLayoutElement {
 	public typealias Cell = JCSLayoutElement
 	public typealias Cells = [JCSLayoutElement]
 
-	public typealias ColumnIteration = Layout.ColumnIteration
-	public typealias RowIteration = Layout.RowIteration
-	public typealias CellIteration = Layout.CellIteration
+	public typealias ColumnIteration = Definition.ColumnIteration
+	public typealias RowIteration = Definition.RowIteration
+	public typealias CellIteration = Definition.CellIteration
 
 	public struct Render {
 		public let column: ((ColumnIteration)->())?
@@ -91,7 +91,6 @@ public struct Grid: JCSLayoutElement {
 			self.row = row
 			self.cell = {
 				if let cell { cell($0) } else { $0.render() }
-				JCSRect(fill: .clear, stroke: .red.withAlphaComponent(0.25), lineWidth: 0.5, radius: 0.0).draw(in: $0.rect)
 			}
 		}
 	}
@@ -110,8 +109,6 @@ public struct Grid: JCSLayoutElement {
 			cells: cells())
 	}
 
-	// Row/Column sorting should happen outside the Grid.
-	// This is not a reactive grid where columns/rows/cells have identity.
 	public init(
 		cols: Columns,
 		rows: Rows = .init(),
@@ -127,33 +124,27 @@ public struct Grid: JCSLayoutElement {
 			layout: layout)
 	}
 
-//MARK: API
-	public let layout: Layout
-	public let render: Render
+	public private(set) var id: String = ""
 
-	public private(set) var id : String = ""
 	public func id(_ id: String) -> Self {
 		var copy = self
 		copy.id = id
 		return copy
 	}
 
+//MARK: API
+	public let layout: Layout
+	public let render: Render
+
 	public func measure(bounds: CGSize) -> CGSize {
-		layout.measure(bounds: bounds).size
+		let definition = layout.measure(bounds: bounds)
+		return definition.size
 	}
 
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
-		let metrics = layout.measure(bounds: measured)
-		let positioned = align.apply(size: metrics.size, in: allocated)
-
-		JCSRect(
-			fill: .clear,
-			stroke: .blue,
-			lineWidth: 1.5,
-			radius: 0).draw(in: allocated)
-
-		layout.iterate(
-			metrics: metrics,
+		let definition = layout.measure(bounds: measured)
+		let positioned = align.apply(size: definition.size, in: allocated)
+		definition.iterate(
 			allocated: positioned,
 			column: render.column,
 			row: render.row,

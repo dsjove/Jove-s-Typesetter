@@ -1,5 +1,5 @@
 import CoreGraphics
-// TODO: create identifiable reducers or groupings for uniform
+// TODO: create identifiable reducers and groupings for uniform
 // TODO: gaps that fill
 
 public struct TrackMetrics {

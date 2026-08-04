@@ -1,6 +1,6 @@
 import Testing
 import CoreGraphics
-@testable import Jove_s_Typesetter
+@testable import SBJLayout
 
 @Suite("TrackLayout")
 struct TrackLayoutTests {
@@ -455,4 +455,117 @@ struct TrackLayoutTests {
         #expect(widths.offsets.isEmpty)
         expectEqual(widths.size, 0)
     }
+
+
+    // MARK: - Explicit invalidation and factory input
+
+    @Test
+    func testInvalidateClearsPreparedAndResolvedState() {
+        let widths = TrackLayout(
+            tracks: [Track(.intrinsic())],
+            layout: .tight
+        )
+        var intrinsicValue = CGFloat(10)
+        var callCount = 0
+
+        widths.apply { _, _, _ in
+            callCount += 1
+            return intrinsicValue
+        }
+        expectEqual(widths.lengths, [10])
+
+        intrinsicValue = 20
+        widths.invalidate()
+
+        #expect(widths.lengths.isEmpty)
+        #expect(widths.offsets.isEmpty)
+        expectEqual(widths.size, 0)
+        #expect(widths.fillCount == 0)
+
+        widths.apply { _, _, _ in
+            callCount += 1
+            return intrinsicValue
+        }
+
+        expectEqual(widths.lengths, [20])
+        expectEqual(widths.offsets, [0])
+        expectEqual(widths.size, 20)
+        #expect(callCount == 2)
+    }
+
+    @Test
+    func testFactoryCreatesRequestedTracksOnlyOnce() {
+        var requestedIndexes: [Int] = []
+        let widths = TrackLayout(
+            factory: { index in
+                requestedIndexes.append(index)
+                return Track(.fixed(CGFloat(index + 1) * 10))
+            },
+            count: 3,
+            layout: .tight
+        )
+
+        apply(widths)
+
+        #expect(requestedIndexes == [0, 1, 2])
+        expectEqual(widths.lengths, [10, 20, 30])
+        expectEqual(widths.offsets, [0, 10, 30])
+        expectEqual(widths.size, 60)
+
+        apply(widths)
+
+        #expect(requestedIndexes == [0, 1, 2])
+    }
+
+    // MARK: - Input normalization
+
+    @Test
+    func testNegativeFixedAndIntrinsicLengthsClampToZero() {
+        let widths = TrackLayout(
+            tracks: [
+                Track(.fixed(-10)),
+                Track(.intrinsic())
+            ],
+            layout: .tight
+        )
+
+        widths.apply { index, _, _ in
+            index == 1 ? -20 : 0
+        }
+
+        expectEqual(widths.lengths, [0, 0])
+        expectEqual(widths.size, 0)
+    }
+
+    @Test
+    func testNegativeAvailableSpaceAllocatesNoFill() {
+        let widths = TrackLayout(
+            tracks: [Track(.fill())],
+            layout: .tight
+        )
+
+        apply(widths, available: -100)
+
+        expectEqual(widths.lengths, [0])
+        expectEqual(widths.offsets, [0])
+        expectEqual(widths.size, 0)
+    }
+
+    @Test
+    func testNonpositiveFillFractionAndMaximumLockAtZero() {
+        let widths = TrackLayout(
+            tracks: [
+                Track(.fill(-0.5, min: 20)),
+                Track(.fill(max: 0)),
+                Track(.fill())
+            ],
+            layout: .tight
+        )
+
+        apply(widths, available: 90)
+
+        expectEqual(widths.lengths, [0, 0, 90])
+        #expect(widths.fillCount == 1)
+    }
+
 }
