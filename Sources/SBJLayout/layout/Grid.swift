@@ -131,12 +131,18 @@ public struct Grid: JCSLayoutElement {
 	public let layout: Layout
 	public let render: Render
 
+	public private(set) var id : String = ""
+	public func id(_ id: String) -> Self {
+		var copy = self
+		copy.id = id
+		return copy
+	}
+
 	public func measure(bounds: CGSize) -> CGSize {
 		layout.measure(bounds: bounds).size
 	}
 
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
-		let allocated = align.apply(size: measured, in: allocated)
 		JCSRect(
 			fill: .clear,
 			stroke: .blue,
@@ -144,6 +150,9 @@ public struct Grid: JCSLayoutElement {
 			radius: 0).draw(in: allocated)
 
 		let metrics = layout.measure(bounds: measured)
+
+		let allocated = align.apply(size: measured, in: allocated)
+		print("\(id) Draw R\(allocated), M\(measured), I\(metrics.size), A\(align) -> \(allocated.origin)")
 
 		layout.iterate(
 			metrics: metrics,

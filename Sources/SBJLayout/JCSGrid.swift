@@ -137,6 +137,14 @@ public struct JCSGrid: JCSLayoutElement {
 			cells: cells())
 	}
 
+	public private(set) var id : String = ""
+	public func id(_ id: String) -> Self {
+		var copy = self
+		copy.id = id
+		copy.layout.id = id
+		return copy
+	}
+
 	// Row/Column sorting should happen outside the Grid.
 	// This is not a reactive grid where columns/rows/cells have identity.
 	public init(
@@ -168,6 +176,8 @@ public struct JCSGrid: JCSLayoutElement {
 		var fixedWidth: Bool { !(prep?.hasFillColumns ?? false)}
 		var fixedHeight: Bool { !(prep?.hasFillRows ?? false)}
 		var intrinsicSize: CGSize { fixed?.size ?? (calculated?.size ?? .zero) }
+
+		var id: String = ""
 
 		init(spec: Specification) {
 			self.spec = spec
@@ -208,6 +218,8 @@ public struct JCSGrid: JCSLayoutElement {
 		func draw(_ allocated: CGRect, _ measured: CGSize, _ align: Alignment) {
 //TODO: Bug rect not always correct
 			let rect = align.apply(size: intrinsicSize, in: allocated)
+
+		print("\(id) Draw R\(allocated), M\(measured) I\(intrinsicSize), A\(align) -> \(rect.origin)")
 
 		JCSRect(
 			fill: .clear,
