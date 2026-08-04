@@ -15,6 +15,10 @@ public extension CGFloat {
 public extension CGSize {
 	static let unbounded: CGSize = .init(width: CGFloat.unbounded, height: CGFloat.unbounded)
 
+	var isEmpty: Bool {
+		width.isZero || height.isZero
+	}
+
 	init(fixedWidth: CGFloat) {
 		self.init(width: fixedWidth, height: CGFloat.unbounded)
 	}
@@ -27,12 +31,14 @@ public extension CGSize {
 		"(\(width.unboundedDescription)x\(height.unboundedDescription))"
 	}
 
-	func inset(by inset: CGFloat) -> CGSize {
-		.init(width: width - inset*2, height: height - inset*2)
+	func inset(by value: CGFloat) -> CGSize {
+		inset(dx: value, dy: value)
 	}
 
 	func inset(dx: CGFloat, dy: CGFloat) -> CGSize {
-		.init(width: width - dx*2, height: height - dy*2)
+		.init(
+			width: width.isUnbounded ? width : width - dx*2,
+			height: height.isUnbounded ? height : height - dy*2,)
 	}
 }
 

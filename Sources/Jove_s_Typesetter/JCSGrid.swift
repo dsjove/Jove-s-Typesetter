@@ -208,6 +208,13 @@ public struct JCSGrid: JCSLayoutElement {
 		func draw(_ allocated: CGRect, _ measured: CGSize, _ align: Alignment) {
 //TODO: Bug rect not always correct
 			let rect = align.apply(size: intrinsicSize, in: allocated)
+
+		JCSRect(
+			fill: .clear,
+			stroke: .blue,
+			lineWidth: 1.5,
+			radius: 0).draw(in: rect)
+
 			spec.draw(calculateLayout(for: measured), rect)
 		}
 	}

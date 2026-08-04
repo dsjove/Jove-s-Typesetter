@@ -19,12 +19,12 @@ public extension JCSLayoutElement {
 		draw(in: allocated, measured: measured ?? allocated.size, align: align)
 	}
 
-	// Auto measures and returns allocated rect at origin
+	// Auto measures, draws at origin, and returns allocated rect at origin
 	@discardableResult
-	func draw(at origin: CGPoint, bounds: CGSize = .unbounded) -> CGRect {
+	func draw(at origin: CGPoint, bounds: CGSize = .unbounded, align: Alignment = .leftTop) -> CGRect {
 		let measured = measure(bounds: bounds)
 		let allocated = CGRect(origin: origin, size: measured)
-		draw(in: allocated, measured: measured)
+		draw(in: allocated, measured: measured, align: align)
 		return allocated
 	}
 

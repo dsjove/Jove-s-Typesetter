@@ -33,7 +33,7 @@ struct TrackLayoutTests {
     @Test
     func testFixedTightLayoutAddsLengths() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(20)),
                 Track(.fixed(30)),
                 Track(.fixed(40))
@@ -45,14 +45,13 @@ struct TrackLayoutTests {
 
         expectEqual(widths.lengths, [20, 30, 40])
         expectEqual(widths.offsets, [0, 20, 50])
-        expectEqual(widths.baseLineSize, 90)
         expectEqual(widths.size, 90)
     }
 
     @Test
     func testGapLayoutOmitsTrailingGap() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(20), gap: 3),
                 Track(.fixed(30), gap: 5),
                 Track(.fixed(40), gap: 7)
@@ -70,7 +69,7 @@ struct TrackLayoutTests {
     @Test
     func testGapLayoutSkipsZeroLengthElements() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(20), gap: 3),
                 Track(.fixed(0), gap: 100),
                 Track(.fixed(30), gap: 5)
@@ -87,7 +86,7 @@ struct TrackLayoutTests {
     @Test
     func testStackLayoutUsesLargestLength() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(20)),
                 Track(.fixed(50)),
                 Track(.fixed(30))
@@ -107,7 +106,7 @@ struct TrackLayoutTests {
     func testIntrinsicUsesProvidedBoundAndMinimum() {
         var receivedBounds: [CGFloat] = []
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.intrinsic(bound: 80, min: 25)),
                 Track(.intrinsic(bound: 40, min: 25))
             ],
@@ -126,39 +125,54 @@ struct TrackLayoutTests {
     }
 
     @Test
-    func testUniformDefaultsToLargestPositiveBaselineLength() {
+    func testIntrinsicMayExceedSuggestedBound() {
         let widths = TrackLayout(
-            elements: [
-                Track(.uniform()),
-                Track(.intrinsic()),
-                Track(.fixed(40))
-            ],
+            tracks: [Track(.intrinsic(bound: 40))],
             layout: .tight
         )
 
-        apply(widths, intrinsicValues: [10, 25, 0])
+        widths.apply { _, _, bound in
+            #expect(bound == 40)
+            return 65
+        }
 
-        expectEqual(widths.lengths, [40, 25, 40])
-        expectEqual(widths.offsets, [0, 40, 65])
-        #expect(widths.uniformCount == 1)
-        #expect(widths.hasUniform)
+        expectEqual(widths.lengths, [65])
+        expectEqual(widths.size, 65)
     }
 
     @Test
-    func testUniformSupportsCustomReducer() {
+    func testUniformDefaultsToLargestUniformLength() {
         let widths = TrackLayout(
-            elements: [
-                Track(.uniform(+)),
-                Track(.fixed(20)),
-                Track(.fixed(30))
+            tracks: [
+                Track(.uniform()),
+                Track(.intrinsic()),
+                Track(.fixed(40)),
+                Track(.uniform())
             ],
             layout: .tight
         )
 
-        apply(widths, intrinsicValues: [10, 0, 0])
+        apply(widths, intrinsicValues: [10, 25, 0, 30])
 
-        expectEqual(widths.lengths, [60, 20, 30])
-        expectEqual(widths.offsets, [0, 60, 80])
+        expectEqual(widths.lengths, [30, 25, 40, 30])
+        expectEqual(widths.offsets, [0, 30, 55, 95])
+    }
+
+    @Test
+    func testUniformSupportsCustomReducerWithoutRepeatingFirstValue() {
+        let widths = TrackLayout(
+            tracks: [
+                Track(.uniform(+)),
+                Track(.uniform(+)),
+                Track(.fixed(20))
+            ],
+            layout: .tight
+        )
+
+        apply(widths, intrinsicValues: [10, 15, 0])
+
+        expectEqual(widths.lengths, [25, 25, 20])
+        expectEqual(widths.offsets, [0, 25, 50])
     }
 
     // MARK: - Linear fill
@@ -166,7 +180,7 @@ struct TrackLayoutTests {
     @Test
     func testSingleFillConsumesAvailableGrowth() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(100)),
                 Track(.fill())
             ],
@@ -183,7 +197,7 @@ struct TrackLayoutTests {
     @Test
     func testEqualFillsSplitAvailableGrowth() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(100)),
                 Track(.fill()),
                 Track(.fill())
@@ -199,9 +213,9 @@ struct TrackLayoutTests {
     }
 
     @Test
-    func testFillMinimumIsIncludedInBaselineThenGrowthIsAdded() {
+    func testFillMinimumConstrainsFractionOfAvailableFillSpace() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(100)),
                 Track(.fill(min: 50))
             ],
@@ -210,8 +224,6 @@ struct TrackLayoutTests {
 
         apply(widths, available: 300)
 
-        expectEqual(widths.baseLine, [100, 50])
-        expectEqual(widths.baseLineSize, 150)
         expectEqual(widths.lengths, [100, 200])
         expectEqual(widths.offsets, [0, 100])
         expectEqual(widths.size, 300)
@@ -220,7 +232,7 @@ struct TrackLayoutTests {
     @Test
     func testFillMaximumLimitsGrowth() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(100)),
                 Track(.fill(max: 75))
             ],
@@ -237,7 +249,7 @@ struct TrackLayoutTests {
     @Test
     func testExplicitFractionsCannotExceedRemainingSpace() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fill(0.75)),
                 Track(.fill(0.75))
             ],
@@ -254,7 +266,7 @@ struct TrackLayoutTests {
     @Test
     func testZeroFractionFillIsLockedAtZero() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fill(0, min: 20)),
                 Track(.fill())
             ],
@@ -273,7 +285,7 @@ struct TrackLayoutTests {
     @Test
     func testNewlyVisibleFillGapIsDeductedFromGrowth() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(100), gap: 10),
                 Track(.fill(), gap: 20)
             ],
@@ -282,8 +294,8 @@ struct TrackLayoutTests {
 
         apply(widths, available: 300)
 
-        // The first pass gives the fill 200, producing a total of 310.
-        // The correction removes the 10-point overflow from fill growth.
+        // The active fill reserves the preceding 10-point gap before
+        // the complete sequential fill space is calculated.
         expectEqual(widths.lengths, [100, 190])
         expectEqual(widths.offsets, [0, 110])
         expectEqual(widths.size, 300)
@@ -292,7 +304,7 @@ struct TrackLayoutTests {
     @Test
     func testPositiveFillMinimumDoesNotAddAnotherGap() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(100), gap: 10),
                 Track(.fill(min: 50), gap: 20)
             ],
@@ -301,9 +313,8 @@ struct TrackLayoutTests {
 
         apply(widths, available: 300)
 
-        // The gap already exists in the baseline because the fill minimum is positive.
-        expectEqual(widths.baseLine, [100, 50])
-        expectEqual(widths.baseLineSize, 160)
+        // Fill minimums are absent from prepared sizing. The active fill
+        // still reserves the preceding gap before fill allocation.
         expectEqual(widths.lengths, [100, 190])
         expectEqual(widths.offsets, [0, 110])
         expectEqual(widths.size, 300)
@@ -312,7 +323,7 @@ struct TrackLayoutTests {
     @Test
     func testZeroLengthElementBetweenVisibleElementsDoesNotAddGap() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(100), gap: 10),
                 Track(.fill(0), gap: 100),
                 Track(.fixed(50), gap: 20)
@@ -332,7 +343,7 @@ struct TrackLayoutTests {
     @Test
     func testStackFillUsesFractionOfEntireAvailableSize() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(80)),
                 Track(.fill(0.5))
             ],
@@ -349,7 +360,7 @@ struct TrackLayoutTests {
     @Test
     func testStackFillHonorsMinimumAndMaximum() {
         let minimumWidths = TrackLayout(
-            elements: [Track(.fill(0.1, min: 50, max: 200))],
+            tracks: [Track(.fill(0.1, min: 50, max: 200))],
             layout: .stack
         )
         apply(minimumWidths, available: 300)
@@ -357,7 +368,7 @@ struct TrackLayoutTests {
         expectEqual(minimumWidths.offsets, [0])
 
         let maximumWidths = TrackLayout(
-            elements: [Track(.fill(1, min: 0, max: 120))],
+            tracks: [Track(.fill(1, min: 0, max: 120))],
             layout: .stack
         )
         apply(maximumWidths, available: 300)
@@ -370,7 +381,7 @@ struct TrackLayoutTests {
     @Test
     func testRepeatedBoundUsesCachedFillResult() {
         let widths = TrackLayout(
-            elements: [Track(.fill())],
+            tracks: [Track(.fill())],
             layout: .tight
         )
         var intrinsicCallCount = 0
@@ -396,7 +407,7 @@ struct TrackLayoutTests {
     @Test
     func testChangedBoundRecalculatesFromBaseline() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(100)),
                 Track(.fill())
             ],
@@ -415,7 +426,7 @@ struct TrackLayoutTests {
     @Test
     func testUnboundedAfterBoundedRestoresBaseline() {
         let widths = TrackLayout(
-            elements: [
+            tracks: [
                 Track(.fixed(100)),
                 Track(.fill(min: 25))
             ],
@@ -427,16 +438,16 @@ struct TrackLayoutTests {
 
         apply(widths, available: .unbounded)
 
-        expectEqual(widths.lengths, [100, 25])
+        expectEqual(widths.lengths, [100, 0])
         expectEqual(widths.offsets, [0, 100])
-        expectEqual(widths.size, 125)
+        expectEqual(widths.size, 100)
     }
 
     // MARK: - Empty input
 
     @Test
     func testEmptyElementsRemainEmpty() {
-        let widths = TrackLayout(elements: [], layout: .tight)
+        let widths = TrackLayout(tracks: [], layout: .tight)
 
         apply(widths, available: 100)
 

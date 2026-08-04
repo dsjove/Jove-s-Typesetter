@@ -1,9 +1,14 @@
 import CoreGraphics
+// TODO: create identifiable reducers or groupings for uniform
 
 public enum TrackSize: CustomStringConvertible {
+// Fully non-computed size
 	case fixed(_ value: CGFloat)
+// Computes intrinsic size given bounds, then applies min
 	case intrinsic(bound: CGFloat = .unbounded, min: CGFloat? = nil)
+// Fraction is of complete available space, honoring min/max
 	case fill(_ fraction: CGFloat? = nil, min :CGFloat = 0, max: CGFloat = .unbounded)
+// Given uniform only elements, use the reduce function
 	case uniform(_ reduce: (CGFloat, CGFloat)->CGFloat = max)
 
 	public var description: String {

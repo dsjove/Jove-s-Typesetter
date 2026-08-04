@@ -25,6 +25,7 @@ public struct Alignment: OptionSet, Sendable, Codable, CustomStringConvertible, 
 	public static let rightCenter: Alignment = [.right, .centerY]
 	public static let rightBottom: Alignment = [.right, .bottom]
 
+	// if empty, assumes leftTop
 	public func apply(size: CGSize, in rect: CGRect) -> CGRect {
 		let x: CGFloat
 		if contains(.centerX) {

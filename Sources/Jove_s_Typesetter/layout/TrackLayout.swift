@@ -1,4 +1,24 @@
 import CoreGraphics
+// TODO: create identifiable reducers or groupings for uniform
+
+public struct TrackMetrics {
+	public internal(set) var tracks: [Track]
+	public internal(set) var lengths: [CGFloat]
+	public internal(set) var offsets: [CGFloat]
+	public internal(set) var size: CGFloat
+
+	public init(
+		tracks: [Track] = [],
+		lengths: [CGFloat] = [],
+		offsets: [CGFloat] = [],
+		size: CGFloat = 0
+	) {
+		self.tracks = tracks
+		self.lengths = lengths
+		self.offsets = offsets
+		self.size = size
+	}
+}
 
 public class TrackLayout {
 // Init
@@ -6,37 +26,43 @@ public class TrackLayout {
 	public let count: Int
 	public var isEmpty: Bool { count == 0 }
 	public let layout: TrackArrangement
-// Prepared
-	public private(set) var elements: [Track]
-	public private(set) var uniformCount: Int
-	public var hasUniform: Bool { uniformCount > 0 }
+// Resolved snapshot
+	public private(set) var metrics: TrackMetrics
+	public var tracks: [Track] { metrics.tracks }
+	public var lengths: [CGFloat] { metrics.lengths }
+	public var offsets: [CGFloat] { metrics.offsets }
+	public var size: CGFloat { metrics.size }
+// Prepared (lengths and sizes do not include fills
 	public private(set) var fillCount: Int
 	public var hasFill: Bool { fillCount > 0 }
-	public private(set) var baseLine: [CGFloat]
-	public private(set) var baseLineSize: CGFloat
+	private var preparedLengths: [CGFloat]
+	private var preparedSize: CGFloat
 // Can change with hasFill
 	private var lastBounds: CGFloat?
-	public private(set) var lengths: [CGFloat]
-	public private(set) var offsets: [CGFloat]
-	public private(set) var size: CGFloat
 
 	public init(
 		factory: ((Int)->Track)? = nil,
-		elements: [Track] = [],
+		tracks: [Track] = [],
 		count :Int? = nil,
 		layout: TrackArrangement
 	) {
 		self.factory = factory
-		self.elements = elements
-		self.count = count ?? elements.count
+		self.metrics = .init(tracks: tracks)
+		self.count = count ?? tracks.count
 		self.layout = layout
-		self.uniformCount = 0
 		self.fillCount = 0
-		self.baseLine = []
-		self.lengths = []
-		self.offsets = []
-		self.size = 0
-		self.baseLineSize = 0
+		self.preparedLengths = []
+		self.preparedSize = 0
+	}
+
+	public func invalidate() {
+		fillCount = 0
+		preparedLengths = []
+		preparedSize = 0
+		lastBounds = nil
+		metrics.lengths = []
+		metrics.offsets = []
+		metrics.size = 0
 	}
 
 	public func apply(
@@ -47,10 +73,10 @@ public class TrackLayout {
 			_ bound: CGFloat
 		) -> CGFloat
 	) {
-		if let factory, elements.isEmpty {
-			elements = (0..<count).map(factory)
+		if let factory, metrics.tracks.isEmpty {
+			metrics.tracks = (0..<count).map(factory)
 		}
-		guard elements.isEmpty == false else { return }
+		guard !metrics.tracks.isEmpty else { return }
 		prepare(intrinsic)
 		calculateFills(available)
 	}
@@ -62,65 +88,100 @@ public class TrackLayout {
 			_ bound: CGFloat
 		) -> CGFloat
 	) {
-		guard baseLine.isEmpty else { return }
-		self.baseLine = Array(repeating: 0, count: elements.count)
-		for (index, element) in elements.enumerated() {
+		guard preparedLengths.isEmpty else { return }
+		self.preparedLengths = Array(repeating: 0, count: metrics.tracks.count)
+		var uniform: [CGFloat] = []
+		uniform.reserveCapacity(metrics.tracks.count)
+		for (index, element) in metrics.tracks.enumerated() {
 			switch element.length {
 			case .fixed(let length):
-				self.baseLine[index] = length
+				self.preparedLengths[index] = max(0, length)
 			case .intrinsic(bound: let bound, min: let minimum):
 				var length = intrinsic(index, element, bound)
-				if let minimum { length = max(length, minimum) }
-				self.baseLine[index] = length
+				length = max(length, minimum ?? 0)
+				self.preparedLengths[index] = length
 			case .uniform(_):
-				uniformCount += 1
-				let length = intrinsic(index, element, .unbounded)
-				self.baseLine[index] = length
-			case .fill(let fraction, let mininum, let maximum):
-				let lockedAtZero = maximum <= 0 || fraction.map {$0 <= 0} ?? false
+				var length = intrinsic(index, element, .unbounded)
+				length = max(length, 0)
+				if length > 0 {
+					uniform.append(length)
+				}
+				self.preparedLengths[index] = length
+			case .fill(let fraction, _, let maximum):
+				let lockedAtZero = maximum <= 0 || fraction.map { $0 <= 0 } ?? false
 				if !lockedAtZero { fillCount += 1 }
-				let length = lockedAtZero ? 0 : max(0, mininum)
-				self.baseLine[index] = length
+				// Fill lengths are resolved only after available space is known.
+				self.preparedLengths[index] = 0
 			}
 		}
-		if hasUniform && elements.count > 1 {
-			let snapshot = baseLine.dropFirst()
-			let first = baseLine.first!
-			for (index, element) in elements.enumerated() {
+		if let first = uniform.first {
+			for (index, element) in metrics.tracks.enumerated() {
 				switch element.length {
 				case .uniform(let reduce):
-// TODO: create identifiable reducers for optimization
-					let length = snapshot.reduce(first) { accume, next in
+					let length = uniform.dropFirst().reduce(first) { accume, next in
 						next > 0.0 ? reduce(accume, next) : accume
 					}
-					self.baseLine[index] = length
+					self.preparedLengths[index] = length
 				default:
 					break
 				}
 			}
 		}
-		self.lengths = baseLine
-		self.baseLineSize = calculateSize()
-		self.size = baseLineSize
+		metrics.lengths = preparedLengths
+		self.preparedSize = calculatePreparedSize()
+		self.metrics.size = calculateSize()
 	}
 
-	private func calculateSize() -> CGFloat {
-		offsets = Array(repeating: 0, count: elements.count)
-
+	private func calculatePreparedSize() -> CGFloat {
 		if layout == .stack {
-			return lengths.reduce(0, max)
+			return metrics.tracks.indices.reduce(CGFloat.zero) { size, index in
+				guard case .fill = metrics.tracks[index].length else {
+					return max(size, preparedLengths[index])
+				}
+				return size
+			}
 		}
 
 		var size: CGFloat = 0
 		var previousVisibleIndex: Int?
 
-		for (index, length) in lengths.enumerated() {
-			if length > 0, layout == .gaps, let previousVisibleIndex {
-				size += elements[previousVisibleIndex].gap
+		for index in metrics.tracks.indices {
+			let visible: Bool
+			let nonFillLength: CGFloat
+
+			switch metrics.tracks[index].length {
+			case .fill(let fraction, _, let maximum):
+				visible = maximum > 0 && (fraction == nil || fraction! > 0)
+				nonFillLength = 0
+			default:
+				nonFillLength = max(preparedLengths[index], 0)
+				visible = nonFillLength > 0
 			}
 
-			offsets[index] = size
+			guard visible else { continue }
+			if layout == .gaps, let previousVisibleIndex {
+				size += max(metrics.tracks[previousVisibleIndex].gap, 0)
+			}
+			size += nonFillLength
+			previousVisibleIndex = index
+		}
 
+		return size
+	}
+
+	private func calculateSize() -> CGFloat {
+		metrics.offsets = Array(repeating: 0, count: metrics.tracks.count)
+		if layout == .stack {
+			return metrics.lengths.reduce(0, max)
+		}
+		var size: CGFloat = 0
+		var previousVisibleIndex: Int?
+
+		for (index, length) in metrics.lengths.enumerated() {
+			if length > 0, layout == .gaps, let previousVisibleIndex {
+				size += metrics.tracks[previousVisibleIndex].gap
+			}
+			metrics.offsets[index] = size
 			if length > 0 {
 				size += length
 				previousVisibleIndex = index
@@ -134,71 +195,86 @@ public class TrackLayout {
 		guard hasFill else { return }
 		guard lastBounds != available else { return }
 		lastBounds = available
-		lengths = baseLine
-		size = calculateSize()
+		metrics.lengths = preparedLengths
+		metrics.size = calculateSize()
 		guard available != .unbounded else { return }
 
-		let fillFraction = 1.0 / CGFloat(fillCount)
+		let dftFillFraction = 1.0 / CGFloat(fillCount)
 		if layout == .stack {
-			for (index, element) in elements.enumerated() {
+			for (index, element) in metrics.tracks.enumerated() {
 				switch element.length {
 				case .fill(let fraction, let minimum, let maximum):
 					let lockedAtZero = maximum <= 0 || fraction.map {$0 <= 0} ?? false
 					if !lockedAtZero {
-						let fraction = fraction.map { $0 >= 0.0 ? $0 : 0.0} ?? fillFraction
+						let fraction = fraction.map { $0 >= 0.0 ? $0 : 0.0} ?? dftFillFraction
 						let length = max(minimum, min(maximum, fraction * available))
-						self.lengths[index] = length
+						self.metrics.lengths[index] = length
 					}
 				default:
 					break
 				}
 			}
 		} else {
-			var availableGrowth = max(0, available - baseLineSize)
+			var availableFill = max(0, available - preparedSize)
+			resetSequentialFills()
 			allocateFills(
-				availableGrowth: availableGrowth,
-				fillFraction: fillFraction
+				availableFill: availableFill,
+				fillFraction: dftFillFraction
 			)
 
 			var calculatedSize = calculateSize()
 			if calculatedSize > available {
 				let overflow = calculatedSize - available
-				availableGrowth = max(0, availableGrowth - overflow)
-				lengths = baseLine
+				availableFill = max(0, availableFill - overflow)
+				resetSequentialFills()
 				allocateFills(
-					availableGrowth: availableGrowth,
-					fillFraction: fillFraction
+					availableFill: availableFill,
+					fillFraction: dftFillFraction
 				)
 				calculatedSize = calculateSize()
 			}
-			self.size = calculatedSize
+			self.metrics.size = calculatedSize
 			return
 		}
-		self.size = calculateSize()
+		self.metrics.size = calculateSize()
+	}
+
+	private func resetSequentialFills() {
+		metrics.lengths = preparedLengths
+		for index in metrics.tracks.indices {
+			if case .fill = metrics.tracks[index].length {
+				metrics.lengths[index] = 0
+			}
+		}
 	}
 
 	private func allocateFills(
-		availableGrowth: CGFloat,
+		availableFill: CGFloat,
 		fillFraction: CGFloat
 	) {
-		guard availableGrowth > 0 else { return }
-		var remainingGrowth = availableGrowth
+		guard availableFill > 0 else { return }
+		var remainingFill = availableFill
 
-		for (index, element) in elements.enumerated() {
-			guard remainingGrowth > 0 else { break }
-			guard case .fill(let fraction, _, let maximum) = element.length else {
+		for (index, element) in metrics.tracks.enumerated() {
+			guard remainingFill > 0 else { break }
+			guard case .fill(let fraction, let minimum, let maximum) = element.length else {
 				continue
 			}
 
 			let lockedAtZero = maximum <= 0 || fraction.map { $0 <= 0 } ?? false
-			guard !lockedAtZero else { continue }
+			guard !lockedAtZero else {
+				metrics.lengths[index] = 0
+				continue
+			}
 
-			let capacity = max(0, maximum - baseLine[index])
-			let requestedGrowth = (fraction ?? fillFraction) * availableGrowth
-			let growth = min(requestedGrowth, capacity, remainingGrowth)
+			let requested = max(
+				minimum,
+				min(maximum, (fraction ?? fillFraction) * availableFill)
+			)
+			let resolved = min(requested, remainingFill)
 
-			lengths[index] = baseLine[index] + growth
-			remainingGrowth -= growth
+			metrics.lengths[index] = resolved
+			remainingFill -= resolved
 		}
 	}
 }

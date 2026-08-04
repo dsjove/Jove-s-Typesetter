@@ -2,8 +2,8 @@ import CoreGraphics
 import Testing
 @testable import Jove_s_Typesetter
 
-@Suite("GridLayout")
-struct GridLayoutTests {
+@Suite("GridLayout iteration")
+struct GridLayoutIterationTests {
 	private final class MeasuringElement: TrackElement {
 		private(set) var measuredBounds: [CGSize] = []
 		let measureBlock: (CGSize) -> CGSize
@@ -291,8 +291,213 @@ struct GridLayoutTests {
 		#expect(grid.cellIdx(0, 1) == 3)
 		#expect(grid.cellIdx(2, 1) == 5)
 	}
-    @Test("Grid metrics remain unchanged after a later measurement")
-    func metricsAreImmutableSnapshots() {
+
+
+	@Test("Iterate emits columns, rows, and cells in row-major order")
+	func iterateEmitsExpectedMetadataAndRects() {
+		let cells = (0..<4).map { index in
+			MeasuringElement(
+				size: CGSize(width: CGFloat(index + 1), height: CGFloat(index + 2))
+			)
+		}
+		let rows = TrackFactory(
+			min: 2,
+			max: 2,
+			Track(.fixed(10), align: .bottom, gap: 3)
+		)
+		let grid = GridLayout(
+			columns: [
+				Track(.fixed(20), align: .left, gap: 5),
+				Track(.fixed(30), align: .right, gap: 7)
+			],
+			rows: rows,
+			cells: cells,
+			layout: .gaps
+		)
+
+		let metrics = grid.measure(bounds: .unbounded)
+
+		var columnIterations: [GridLayout<MeasuringElement>.ColumnIteration] = []
+		var rowIterations: [GridLayout<MeasuringElement>.RowIteration] = []
+		var cellIterations: [GridLayout<MeasuringElement>.CellIteration] = []
+
+		grid.iterate(
+			metrics: metrics,
+			allocated: CGRect(x: 100, y: 200, width: 500, height: 500),
+			column: { columnIterations.append($0) },
+			row: { rowIterations.append($0) },
+			cell: { cellIterations.append($0) }
+		)
+
+		#expect(columnIterations.map(\.index) == [0, 1])
+		#expect(columnIterations.map(\.rect) == [
+			CGRect(x: 100, y: 200, width: 20, height: 23),
+			CGRect(x: 125, y: 200, width: 30, height: 23)
+		])
+		#expect(rowIterations.map(\.index) == [0, 1])
+		#expect(rowIterations.map(\.rect) == [
+			CGRect(x: 100, y: 200, width: 55, height: 10),
+			CGRect(x: 100, y: 213, width: 55, height: 10)
+		])
+		#expect(cellIterations.map(\.i) == [0, 1, 2, 3])
+		#expect(cellIterations.map(\.c) == [0, 1, 0, 1])
+		#expect(cellIterations.map(\.r) == [0, 0, 1, 1])
+		#expect(cellIterations.map(\.rect) == [
+			CGRect(x: 100, y: 200, width: 20, height: 10),
+			CGRect(x: 125, y: 200, width: 30, height: 10),
+			CGRect(x: 100, y: 213, width: 20, height: 10),
+			CGRect(x: 125, y: 213, width: 30, height: 10)
+		])
+		#expect(cellIterations.map(\.content) == cells.map { Optional($0.measureBlock(.zero)) })
+		#expect(cellIterations[0].alignment == [.left, .bottom])
+		#expect(cellIterations[1].alignment == [.right, .bottom])
+	}
+
+	@Test("Iterate permits cell-only callbacks")
+	func iteratePermitsCellOnlyCallbacks() {
+		let cell = MeasuringElement(size: CGSize(width: 5, height: 6))
+		let grid = GridLayout(
+			columns: [Track(.fixed(20))],
+			cells: [cell],
+			layout: .tight
+		)
+		let metrics = grid.measure(bounds: .unbounded)
+
+		var iterations: [GridLayout<MeasuringElement>.CellIteration] = []
+		grid.iterate(metrics: metrics) { iterations.append($0) }
+
+		#expect(iterations.count == 1)
+		#expect(iterations[0].i == 0)
+		#expect(iterations[0].cell === cell)
+		#expect(iterations[0].content == CGSize(width: 5, height: 6))
+		#expect(iterations[0].rect == CGRect(x: 0, y: 0, width: 20, height: 6))
+	}
+
+	@Test("Iterate reports nil for an empty trailing grid cell")
+	func iterateReportsEmptyTrailingCell() {
+		let cells = (0..<3).map { _ in
+			MeasuringElement(size: CGSize(width: 5, height: 8))
+		}
+		let rows = TrackFactory(
+			min: 2,
+			max: 2,
+			Track(.fixed(10))
+		)
+		let grid = GridLayout(
+			columns: [Track(.fixed(20)), Track(.fixed(20))],
+			rows: rows,
+			cells: cells,
+			layout: .tight
+		)
+		let metrics = grid.measure(bounds: .unbounded)
+
+		var iterations: [GridLayout<MeasuringElement>.CellIteration] = []
+		grid.iterate(metrics: metrics) { iterations.append($0) }
+
+		#expect(iterations.map(\.i) == [0, 1, 2, 3])
+		#expect(iterations[0].cell === cells[0])
+		#expect(iterations[1].cell === cells[1])
+		#expect(iterations[2].cell === cells[2])
+		#expect(iterations[3].cell == nil)
+		#expect(iterations[3].content == nil)
+		#expect(iterations[3].rect == CGRect(x: 20, y: 10, width: 20, height: 10))
+	}
+
+	@Test("Truncate true excludes partially clipped columns and cells")
+	func iterateTruncateTrueRequiresFullHorizontalFit() {
+		let cells = [
+			MeasuringElement(size: CGSize(width: 5, height: 10)),
+			MeasuringElement(size: CGSize(width: 5, height: 10))
+		]
+		let grid = GridLayout(
+			columns: [
+				Track(.fixed(20), gap: 5),
+				Track(.fixed(30))
+			],
+			cells: cells,
+			layout: .gaps
+		)
+		let metrics = grid.measure(bounds: .unbounded)
+
+		var columns: [Int] = []
+		var cellIndexes: [Int] = []
+		grid.iterate(
+			metrics: metrics,
+			allocated: CGRect(x: 0, y: 0, width: 40, height: 20),
+			truncate: true,
+			column: { columns.append($0.index) },
+			cell: { cellIndexes.append($0.i) }
+		)
+
+		#expect(columns == [0])
+		#expect(cellIndexes == [0])
+	}
+
+	@Test("Truncate false includes tracks whose origin is inside the allocation")
+	func iterateTruncateFalsePermitsPartialHorizontalFit() {
+		let cells = [
+			MeasuringElement(size: CGSize(width: 5, height: 10)),
+			MeasuringElement(size: CGSize(width: 5, height: 10))
+		]
+		let grid = GridLayout(
+			columns: [
+				Track(.fixed(20), gap: 5),
+				Track(.fixed(30))
+			],
+			cells: cells,
+			layout: .gaps
+		)
+		let metrics = grid.measure(bounds: .unbounded)
+
+		var columns: [Int] = []
+		var cellIndexes: [Int] = []
+		grid.iterate(
+			metrics: metrics,
+			allocated: CGRect(x: 0, y: 0, width: 40, height: 20),
+			truncate: false,
+			column: { columns.append($0.index) },
+			cell: { cellIndexes.append($0.i) }
+		)
+
+		#expect(columns == [0, 1])
+		#expect(cellIndexes == [0, 1])
+	}
+
+	@Test("Vertical truncation uses the allocated maximum Y")
+	func iterateUsesMaximumYForRowTruncation() {
+		let cells = [
+			MeasuringElement(size: CGSize(width: 5, height: 5)),
+			MeasuringElement(size: CGSize(width: 5, height: 5))
+		]
+		let rows = TrackFactory(
+			min: 2,
+			max: 2,
+			Track(.fixed(10), gap: 3)
+		)
+		let grid = GridLayout(
+			columns: [Track(.fixed(20))],
+			rows: rows,
+			cells: cells,
+			layout: .gaps
+		)
+		let metrics = grid.measure(bounds: .unbounded)
+
+		var rowIndexes: [Int] = []
+		var cellIndexes: [Int] = []
+		grid.iterate(
+			metrics: metrics,
+			allocated: CGRect(x: 100, y: 200, width: 20, height: 18),
+			truncate: true,
+			row: { rowIndexes.append($0.index) },
+			cell: { cellIndexes.append($0.i) }
+		)
+
+		#expect(rowIndexes == [0])
+		#expect(cellIndexes == [0])
+	}
+
+    @Test("Iterate uses the supplied metrics snapshot after a later measurement")
+    func iterateUsesSuppliedMetricsSnapshot() {
         let cell = MeasuringElement { bounds in
             CGSize(width: bounds.width, height: bounds.width / 10)
         }
@@ -305,19 +510,21 @@ struct GridLayoutTests {
         let first = grid.measure(
             bounds: CGSize(width: 100, height: .unbounded)
         )
-        let second = grid.measure(
+        _ = grid.measure(
             bounds: CGSize(width: 150, height: .unbounded)
         )
 
-        #expect(first.columns.lengths == [100])
-        #expect(first.rows.lengths == [10])
-        #expect(first.measured == [CGSize(width: 100, height: 10)])
-        #expect(first.size == CGSize(width: 100, height: 10))
+        var iterations: [GridLayout<MeasuringElement>.CellIteration] = []
+        grid.iterate(
+            metrics: first,
+            allocated: CGRect(x: 25, y: 35, width: 100, height: 10),
+            cell: { iterations.append($0) }
+        )
 
-        #expect(second.columns.lengths == [150])
-        #expect(second.rows.lengths == [15])
-        #expect(second.measured == [CGSize(width: 150, height: 15)])
-        #expect(second.size == CGSize(width: 150, height: 15))
+        #expect(iterations.count == 1)
+        #expect(iterations[0].metrics.size == CGSize(width: 100, height: 10))
+        #expect(iterations[0].rect == CGRect(x: 25, y: 35, width: 100, height: 10))
+        #expect(iterations[0].content == CGSize(width: 100, height: 10))
     }
 
 }
