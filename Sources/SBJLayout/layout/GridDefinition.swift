@@ -37,13 +37,13 @@ public struct GridDefinition<Cell: TrackElement> {
 		columns: TrackFactory,
 		rows: TrackFactory = .init(),
 		cells: [Cell],
-		layout: TrackArrangement = .gaps
+		arrangement: TrackArrangement = .gaps
 	) {
 		self.init(
 			columnFactory: columns,
 			rowFactory: rows,
 			cells: cells,
-			arrangement: layout,
+			arrangement: arrangement,
 			columns: .init(),
 			rows: .init(),
 			measured: Array(repeating: .zero, count: cells.count),

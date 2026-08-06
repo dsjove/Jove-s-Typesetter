@@ -1,6 +1,7 @@
 import CoreGraphics
 
-public enum JCSAspect: Int, Sendable, Codable, CustomStringConvertible {
+//TODO: support ratio
+public enum Aspect: Int, Sendable, Codable, CustomStringConvertible {
 	case fit = 0
 	case fill = 1
 	case stretch = 2

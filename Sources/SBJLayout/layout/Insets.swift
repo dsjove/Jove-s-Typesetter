@@ -18,16 +18,23 @@ public struct Insets: Sendable, Codable, CustomStringConvertible {
 	}
 
 	public func apply(size: CGSize, inverse: Bool = false) -> CGSize {
-		size.inset(
-			dx: (left + right) * (inverse ? -1 : 1),
-			dy: (top + bottom) * (inverse ? -1 : 1))
+		let multiplier: CGFloat = inverse ? -1 : 1
+		return .init(
+			width: size.width.isUnbounded
+				? size.width
+				: size.width - ((left + right) * multiplier),
+			height: size.height.isUnbounded
+				? size.height
+				: size.height - ((top + bottom) * multiplier)
+		)
 	}
 
 	public func apply(rect: CGRect, inverse: Bool = false) -> CGRect {
-		rect.inset(
-			left: left * (inverse ? -1 : 1),
-			top: top * (inverse ? -1 : 1),
-			right: right * (inverse ? -1 : 1),
-			bottom: bottom * (inverse ? -1 : 1))
+		let multiplier: CGFloat = inverse ? -1 : 1
+		return rect.inset(
+			left: left * multiplier,
+			top: top * multiplier,
+			right: right * multiplier,
+			bottom: bottom * multiplier)
 	}
 }

@@ -567,5 +567,4 @@ struct TrackLayoutTests {
         expectEqual(widths.lengths, [0, 0, 90])
         #expect(widths.fillCount == 1)
     }
-
 }

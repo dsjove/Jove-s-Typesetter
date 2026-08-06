@@ -1,10 +1,15 @@
-# Jove-s-Typesetter
-Not a UI framework with reactive functions.
-Not a dynamic report generator.
-Simple CoreGraphics wrappers to generate a PDF paginated document.
-Value type semantics.
-Declarative Result Builders for compound elements.
-No Choo-choo train builders.
-Measure-once.
-Grid is the layout workhorse
-Every element has an intrinsic size, but layout is still 'super-view' driven
+# SBJLayout
+I have several apps that produce PDF documents. I want to make that easy and declarative.
+- Not a UI framework with reactive functions.
+- Not a dynamic report generator.
+- Simple CoreGraphics wrappers to generate a PDF paginated document.
+- Value type semantics.
+- Declarative Result Builders for compound elements.
+- No Choo-choo train builders.
+- Measure-once.
+- Every element has an intrinsic size, but layout is still 'super-view' driven.
+- **Grid** is the layout workhorse.
+
+## Grid:
+I had written a feature called 'Custom Columns' about 4 times in my career. It was a UIKit collection view that scaled up to 14,000 cells with live  dynamic intrinsic cell sizes (and subsequent row, col) and content. There were many levers to declare to change sizing and positioning behavior. As live changes were coming in (cell content, sorting, scrolling, etc) there was not a flicker or a hesitation or a battery drain.
+I am reimplementing most of those features wanted for PDF element layout; wrapping CoreGraphics (not UIKit).

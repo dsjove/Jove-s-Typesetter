@@ -42,8 +42,10 @@ public struct TrackFactory {
 		max: Int = Int.max,
 		def: @escaping (Int) -> Track
 	) {
+		let min = Swift.max(0, min)
+		let max = Swift.max(0, max)
 		self.min = min
-		self.max = max
+		self.max = Swift.max(min, max)
 		self.def = def
 	}
 }

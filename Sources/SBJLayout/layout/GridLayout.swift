@@ -23,13 +23,13 @@ public final class GridLayout<Element: TrackElement> {
 		columns: TrackFactory,
 		rows: TrackFactory = .init(),
 		cells: [Element],
-		layout: TrackArrangement = .gaps
+		arrangement: TrackArrangement = .gaps
 	) {
 		let definition = Definition(
 			columns: columns,
 			rows: rows,
 			cells: cells,
-			layout: layout
+			arrangement: arrangement
 		)
 		self.definition = definition
 		self.columns = definition.columnLayout

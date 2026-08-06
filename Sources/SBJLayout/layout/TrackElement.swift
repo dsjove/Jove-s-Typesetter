@@ -5,7 +5,6 @@ public protocol TrackElement {
 	func measure(bounds: CGSize) -> CGSize
 }
 
-// TODO: API - Identifiable
 public struct TrackedElement: TrackElement {
 	public let element: any JCSLayoutElement
 

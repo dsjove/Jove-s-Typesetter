@@ -22,9 +22,9 @@ struct GridDefinitionTests {
 			Track(.fixed(30), align: .right, gap: 7)
 		],
 		rows rowFactory: TrackFactory = .init(
+			row: Track(.fixed(10), align: .bottom, gap: 3),
 			min: 2,
 			max: 2,
-			Track(.fixed(10), align: .bottom, gap: 3)
 		),
 		cells: [Element]? = nil,
 		layout: TrackArrangement = .gaps
@@ -33,10 +33,10 @@ struct GridDefinitionTests {
 			Element(CGSize(width: CGFloat($0 + 1), height: CGFloat($0 + 2)))
 		}
 		let definition = GridDefinition(
-			columns: columnTracks,
+			columns: .init(columnTracks),
 			rows: rowFactory,
 			cells: cells,
-			layout: layout
+			arrangement: layout
 		)
 
 		return definition.resolving(
@@ -60,19 +60,24 @@ struct GridDefinitionTests {
 	@Test("Initial definition contains immutable specification and unresolved snapshot")
 	func initialDefinitionState() {
 		let cells = (0..<3).map { _ in Element() }
-		let rows = TrackFactory(min: 1, max: 4, Track(.intrinsic()))
-		let columns = [Track(.fixed(10)), Track(.fill())]
+		let rows = TrackFactory(
+			row: Track(.intrinsic()),
+			min: 1,
+			max: 4)
+		let columns = TrackFactory(
+			[Track(.fixed(10)), Track(.fill())]
+		)
 		let definition = GridDefinition(
 			columns: columns,
 			rows: rows,
 			cells: cells,
-			layout: .tight
+			arrangement: .tight
 		)
 
-		#expect(definition.columnTracks.count == 2)
+		#expect(definition.columnFactory.max - definition.columnFactory.min + 1 == 2)
 		#expect(definition.cells.count == 3)
 		#expect(definition.arrangement == .tight)
-		#expect(definition.columns.tracks.count == 2)
+		#expect(definition.columns.tracks.isEmpty)
 		#expect(definition.columns.lengths.isEmpty)
 		#expect(definition.rows.tracks.isEmpty)
 		#expect(definition.measured == [.zero, .zero, .zero])
@@ -83,10 +88,10 @@ struct GridDefinitionTests {
 	func derivedCounts() {
 		let cells = (0..<5).map { _ in Element() }
 		let definition = GridDefinition(
-			columns: [Track(.fixed(1)), Track(.fixed(1))],
-			rows: .init(min: 1, max: 2, Track(.fixed(1))),
+			columns: .init([Track(.fixed(1)), Track(.fixed(1))]),
+			rows: .init(row: Track(.fixed(1)), min: 1, max: 2),
 			cells: cells,
-			layout: .tight
+			arrangement: .tight
 		)
 
 		#expect(definition.columnCount == 2)
@@ -99,10 +104,10 @@ struct GridDefinitionTests {
 	@Test("Minimum rows may create empty trailing rows")
 	func minimumRowsCreateEmptyRows() {
 		let definition = GridDefinition(
-			columns: [Track(.fixed(1))],
-			rows: .init(min: 3, max: 5, Track(.fixed(1))),
+			columns: .init([Track(.fixed(1))]),
+			rows: .init(row: Track(.fixed(1)), min: 3, max: 5),
 			cells: [Element()],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		#expect(definition.wantedRowCount == 1)
@@ -113,9 +118,9 @@ struct GridDefinitionTests {
 	@Test("Empty columns produce an empty definition")
 	func emptyColumns() {
 		let definition = GridDefinition(
-			columns: [],
+			columns: .init([]),
 			cells: [Element()],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		#expect(definition.columnCount == 0)
@@ -128,10 +133,10 @@ struct GridDefinitionTests {
 	@Test("A zero maximum row count excludes every cell")
 	func zeroMaximumRows() {
 		let definition = GridDefinition(
-			columns: [Track(.fixed(1))],
-			rows: .init(min: 0, max: 0, Track(.fixed(1))),
+			columns: .init([Track(.fixed(1))]),
+			rows: .init(row: Track(.fixed(1)), min: 0, max: 0),
 			cells: [Element()],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		#expect(definition.rowCount == 0)
@@ -143,14 +148,14 @@ struct GridDefinitionTests {
 	func resolvingCreatesNewSnapshot() {
 		let cell = Element(CGSize(width: 8, height: 9))
 		let original = GridDefinition(
-			columns: [Track(.fixed(20))],
+			columns: .init([Track(.fixed(20))]),
 			cells: [cell],
-			layout: .tight
+			arrangement: .tight
 		)
 		let resolved = original.resolving(
 			bounds: CGSize(width: 20, height: 9),
 			columns: TrackMetrics(
-				tracks: original.columnTracks,
+				tracks: (0..<original.columnCount).map(original.columnFactory.def),
 				lengths: [20],
 				offsets: [0],
 				size: 20
@@ -178,10 +183,10 @@ struct GridDefinitionTests {
 	func cellIndexingAndLookup() {
 		let cells = (0..<5).map { _ in Element() }
 		let definition = GridDefinition(
-			columns: [Track(.fixed(1)), Track(.fixed(1))],
-			rows: .init(min: 0, max: 2, Track(.fixed(1))),
+			columns: .init([Track(.fixed(1)), Track(.fixed(1))]),
+			rows: .init(row: Track(.fixed(1)), min: 0, max: 2),
 			cells: cells,
-			layout: .tight
+			arrangement: .tight
 		)
 
 		#expect(definition.cellIdx(0, 0) == 0)
@@ -198,10 +203,10 @@ struct GridDefinitionTests {
 	func measuredLookup() {
 		let cells = (0..<3).map { _ in Element() }
 		let definition = GridDefinition(
-			columns: [Track(.fixed(1)), Track(.fixed(1))],
-			rows: .init(min: 0, max: 1, Track(.fixed(1))),
+			columns: .init([Track(.fixed(1)), Track(.fixed(1))]),
+			rows: .init(row: Track(.fixed(1)), min: 0, max: 1),
 			cells: cells,
-			layout: .tight
+			arrangement: .tight
 		).resolving(
 			bounds: CGSize(width: 2, height: 1),
 			columns: TrackMetrics(
@@ -233,9 +238,9 @@ struct GridDefinitionTests {
 	func columnTraversal() {
 		let cells = (0..<5).map { _ in Element() }
 		let definition = GridDefinition(
-			columns: [Track(.fixed(1)), Track(.fixed(1))],
+			columns: .init([Track(.fixed(1)), Track(.fixed(1))]),
 			cells: cells,
-			layout: .tight
+			arrangement: .tight
 		)
 		var firstColumn: [Int] = []
 		var secondColumn: [Int] = []
@@ -254,9 +259,9 @@ struct GridDefinitionTests {
 	func rowTraversal() {
 		let cells = (0..<5).map { _ in Element() }
 		let definition = GridDefinition(
-			columns: [Track(.fixed(1)), Track(.fixed(1)), Track(.fixed(1))],
+			columns: .init([Track(.fixed(1)), Track(.fixed(1)), Track(.fixed(1))]),
 			cells: cells,
-			layout: .tight
+			arrangement: .tight
 		)
 		var firstRow: [Int] = []
 		var secondRow: [Int] = []
@@ -394,10 +399,10 @@ struct GridDefinitionTests {
 		)
 		let cells = (0..<6).map { _ in Element(CGSize(width: 5, height: 5)) }
 		let definition = GridDefinition(
-			columns: columnTracks,
+			columns: .init(columnTracks),
 			rows: rowFactory,
 			cells: cells,
-			layout: .tight
+			arrangement: .tight
 		).resolving(
 			bounds: CGSize(width: 50, height: 10),
 			columns: TrackMetrics(
@@ -433,9 +438,9 @@ struct GridDefinitionTests {
 	@Test("Cell traversal ignores negative row and column indexes")
 	func negativeTraversalIndexesAreIgnored() {
 		let definition = GridDefinition(
-			columns: [Track(.fixed(1)), Track(.fixed(1))],
+			columns: .init([Track(.fixed(1)), Track(.fixed(1))]),
 			cells: [Element(), Element()],
-			layout: .tight
+			arrangement: .tight
 		)
 		var indexes: [Int] = []
 
@@ -444,5 +449,4 @@ struct GridDefinitionTests {
 
 		#expect(indexes.isEmpty)
 	}
-
 }

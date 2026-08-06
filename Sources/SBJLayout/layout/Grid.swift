@@ -4,22 +4,24 @@ import CoreGraphics
 // TODO: Feature - Wrapping
 //     wrapped(v) - hits bottom, sets y = 0 and x+=width, measured width needs to account
 //     wrapped(h) - hits right, sets x = 0 and y+=height, measured height needs to account
-// TODO: Bug - min rows have intrinsic size of 0
-// TODO: API - create identifiable reducers and groupings for uniform
+//     header duplication?
+// TODO: Feature - identifiable reducers and groupings for uniform tracks
+// TODO: Bug - min (intentionally empty) rows/cols have intrinsic size of 0
 
 // Remaining Custom Columns...
 // TODO: Feature - column spans
 // TODO: Feature - gaps that fill
 // TODO: Feature - 'best fit' intrinsic size
-// TODO: Design - 'Identifiable' and 'hashable' for optimized measurement recompute (not needed)
+// TODO: Not Needed - Identifiable and Hashable cells for optimized measurements recompute
+// TODO: Not Needed - Split/StickyCol tables (independantly scrollable areas)
 
 public extension Grid {
 //MARK: Convenience inits
 	init(
 		horzFlow col: Column, wrapped at: Int? = nil,
 		rows: Rows = .init(align: .left),
+		@JCSLayoutElementBuilder cells: ()->Cells,
 		render: ((ColumnIteration)->())? = nil,
-		@JCSLayoutElementBuilder cells: ()->Cells
 	) {
 		let cells = cells()
 		self.init(
@@ -46,11 +48,21 @@ public extension Grid {
 	init(
 		table cols: [Column], columnMap: ((Int)->Int)? = nil,
 		header: Track? = nil,
+		leader: Track? = nil,
 		rows: TrackFactory = .init(),
 		@JCSLayoutElementBuilder cells: ()->Cells,
-		render: ((RowIteration)->())? = nil
+		rowRender: ((RowIteration)->())? = nil,
+		colRender: ((ColumnIteration)->())? = nil,
+		cellRender: ((CellIteration)->())? = nil
 	) {
 		let cells = cells()
+		let cols = {
+			if let leader {
+				[leader] + cols
+			} else {
+				cols
+			}
+		}()
 		self.init(
 			cols: .init(cols, map: columnMap),
 			rows: .init(
@@ -58,7 +70,7 @@ public extension Grid {
 				max: rows.max,
 				def: { if let header, $0 == 0 { header } else { rows.def($0) } }
 			),
-			render: .init(row: render),
+			render: .init(column: colRender, row: rowRender, cell: cellRender),
 			cells: cells)
 	}
 }
@@ -66,7 +78,7 @@ public extension Grid {
 public extension GridDefinition<TrackedElement>.CellIteration {
 	func render() {
 		cell?.element.draw(in: rect, measured: content, align: alignment)
-		//JCSRect(fill: .clear, stroke: .red , lineWidth: 0.5, radius: 0).draw(in: rect)
+//JCSRect(fill: .clear, stroke: .red , lineWidth: 0.5, radius: 0).draw(in: rect)
 	}
 }
 
@@ -108,12 +120,14 @@ public struct Grid: JCSLayoutElement {
 		cols: Columns,
 		rows: Rows = .init(),
 		render: Render = .init(),
+		arrangement: TrackArrangement = .gaps,
 		@JCSLayoutElementBuilder cells: ()->Cells
 	) {
 		self.init(
 			cols: cols,
 			rows: rows,
 			render: render,
+			arrangement: arrangement,
 			cells: cells())
 	}
 
@@ -121,15 +135,15 @@ public struct Grid: JCSLayoutElement {
 		cols: Columns,
 		rows: Rows = .init(),
 		render: Render = .init(),
-		cells: Cells,
-		layout: TrackArrangement = .gaps
+		arrangement: TrackArrangement = .gaps,
+		cells: Cells
 	) {
 		self.render = render
 		self.layout = .init(
 			columns: cols,
 			rows: rows,
 			cells: cells.map(TrackedElement.init),
-			layout: layout)
+			arrangement: arrangement)
 	}
 
 	public private(set) var id: String = ""
@@ -152,7 +166,7 @@ public struct Grid: JCSLayoutElement {
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
 		let definition = layout.measure(bounds: measured)
 		let positioned = align.apply(size: definition.size, in: allocated)
-		//JCSRect(fill: .clear, stroke: .blue.withAlphaComponent(0.5) , lineWidth: 1.5, radius: 0).draw(in: positioned)
+//JCSRect(fill: .clear, stroke: .blue.withAlphaComponent(0.5) , lineWidth: 1.5, radius: 0).draw(in: positioned)
 		definition.iterate(
 			allocated: positioned,
 			column: render.column,

@@ -20,7 +20,7 @@ public extension Pagination {
 
 	//TODO: Feature - Pagination
 	// During drawing (not measuring) we need to be able to track this.
-	// cursor is not an 'every item' draw
+	// blockCursor is not an 'every item' draw
 	// but a Drawable needs to be smart enough to know when (not) to call it
 	// we also need a 'first draw always begins' check
 	func request(height: CGFloat) {
@@ -31,7 +31,6 @@ public extension Pagination {
 }
 
 public class BasicPagination: Pagination {
-//TODO: API - allow for cutom PageSize, here being (max, max)
 	public let size: PageSize
 	public let margin: CGSize
 	public let landscape: Bool

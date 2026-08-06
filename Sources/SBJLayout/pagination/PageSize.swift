@@ -1,5 +1,6 @@
 import Foundation
 
+//TODO: Support custom size
 public enum PageSize: Int, Sendable, Codable, CustomStringConvertible {
 	// North American
 	case letter = -1

@@ -32,9 +32,9 @@ struct GridLayoutTests {
 			size: CGSize(width: 40, height: 12)
 		)
 		let layout = GridLayout(
-			columns: [Track(.intrinsic())],
+			columns: .init([Track(.intrinsic())]),
 			cells: [cell],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		let definition = layout.measure(bounds: .unbounded)
@@ -52,9 +52,9 @@ struct GridLayoutTests {
 			CGSize(width: bounds.width, height: 14)
 		}
 		let layout = GridLayout(
-			columns: [Track(.fixed(80))],
+			columns: .init([Track(.fixed(80))]),
 			cells: [cell],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		let first = layout.measure(
@@ -80,9 +80,9 @@ struct GridLayoutTests {
 			CGSize(width: bounds.width, height: bounds.width / 10)
 		}
 		let layout = GridLayout(
-			columns: [Track(.fill())],
+			columns: .init([Track(.fill())]),
 			cells: [cell],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		let first = layout.measure(
@@ -116,12 +116,12 @@ struct GridLayoutTests {
 			size: CGSize(width: 30, height: 15)
 		)
 		let layout = GridLayout(
-			columns: [
+			columns: .init([
 				Track(.fixed(40)),
 				Track(.fixed(40))
-			],
+			]),
 			cells: [first, second],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		let definition = layout.measure(bounds: .unbounded)
@@ -137,10 +137,10 @@ struct GridLayoutTests {
 			CGSize(width: bounds.width, height: bounds.width / 5)
 		}
 		let layout = GridLayout(
-			columns: [Track(.fill())],
-			rows: .init(Track(.intrinsic())),
+			columns: .init([Track(.fill())]),
+			rows: .init(row: Track(.intrinsic())),
 			cells: [cell],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		let first = layout.measure(
@@ -161,9 +161,9 @@ struct GridLayoutTests {
 			size: CGSize(width: 10, height: 10)
 		)
 		let layout = GridLayout(
-			columns: [Track(.fixed(0))],
+			columns: .init([Track(.fixed(0))]),
 			cells: [cell],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		let definition = layout.measure(bounds: .unbounded)
@@ -179,9 +179,9 @@ struct GridLayoutTests {
 			CGSize(width: bounds.width, height: bounds.width / 10)
 		}
 		let layout = GridLayout(
-			columns: [Track(.fill())],
+			columns: .init([Track(.fill())]),
 			cells: [cell],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		let first = layout.measure(
@@ -211,17 +211,13 @@ struct GridLayoutTests {
 			MeasuringElement(size: CGSize(width: 10, height: 10))
 		}
 		let layout = GridLayout(
-			columns: [
+			columns: .init([
 				Track(.fixed(20)),
 				Track(.fixed(20))
-			],
-			rows: .init(
-				min: 0,
-				max: 2,
-				Track(.intrinsic())
-			),
+			]),
+			rows: .init(row: Track(.intrinsic()), min: 0, max: 2),
 			cells: cells,
-			layout: .tight
+			arrangement: .tight
 		)
 
 		_ = layout.measure(bounds: .unbounded)
@@ -239,9 +235,9 @@ struct GridLayoutTests {
 			size: CGSize(width: 10, height: 10)
 		)
 		let layout = GridLayout(
-			columns: [],
+			columns: .init([]),
 			cells: [cell],
-			layout: .tight
+			arrangement: .tight
 		)
 
 		let definition = layout.measure(bounds: .unbounded)
@@ -259,9 +255,9 @@ struct GridLayoutTests {
 			MeasuringElement(size: CGSize(width: 30, height: 7))
 		]
 		let layout = GridLayout(
-			columns: [Track(.intrinsic())],
+			columns: .init([Track(.intrinsic())]),
 			cells: cells,
-			layout: .tight
+			arrangement: .tight
 		)
 
 		let definition = layout.measure(bounds: .unbounded)
@@ -282,4 +278,58 @@ struct GridLayoutTests {
 		])
 	}
 
+}
+
+extension GridLayoutTests {
+	@Test("Column factory aggregate reducer combines intrinsic widths")
+	func columnFactoryAggregateReducer() {
+		let cells = [
+			MeasuringElement(size: CGSize(width: 10, height: 4)),
+			MeasuringElement(size: CGSize(width: 15, height: 6))
+		]
+		let layout = GridLayout(
+			columns: TrackFactory(.intrinsic(), aggregate: +, min: 1, max: 1),
+			cells: cells,
+			arrangement: .tight
+		)
+
+		let definition = layout.measure(bounds: .unbounded)
+
+		#expect(definition.columns.lengths == [25])
+	}
+
+	@Test("Row factory aggregate reducer combines measured heights")
+	func rowFactoryAggregateReducer() {
+		let cells = [
+			MeasuringElement(size: CGSize(width: 10, height: 4)),
+			MeasuringElement(size: CGSize(width: 10, height: 6))
+		]
+		let layout = GridLayout(
+			columns: TrackFactory([
+				Track(.fixed(10)),
+				Track(.fixed(10))
+			]),
+			rows: TrackFactory(.intrinsic(), aggregate: +),
+			cells: cells,
+			arrangement: .tight
+		)
+
+		let definition = layout.measure(bounds: .unbounded)
+
+		#expect(definition.rows.lengths == [10])
+	}
+
+	@Test("Track factory mapping controls generated column order")
+	func trackFactoryMappingControlsColumns() {
+		let tracks = [Track(.fixed(10)), Track(.fixed(20)), Track(.fixed(30))]
+		let layout = GridLayout(
+			columns: TrackFactory(tracks, map: { tracks.count - 1 - $0 }),
+			cells: (0..<3).map { _ in MeasuringElement(size: .zero) },
+			arrangement: .tight
+		)
+
+		let definition = layout.measure(bounds: .unbounded)
+
+		#expect(definition.columns.lengths == [30, 20, 10])
+	}
 }

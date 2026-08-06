@@ -41,10 +41,10 @@ struct GridRenderingTests {
 	func defaultCellRendererDrawsCell() {
 		let cell = DrawingElement(size: CGSize(width: 12, height: 8))
 		let grid = Grid(
-			cols: [Track(.fixed(40), align: .right)],
-			rows: TrackFactory(Track(.fixed(20), align: .bottom)),
-			cells: [cell],
-			layout: .tight
+			cols: .init([Track(.fixed(40), align: .right)]),
+			rows: TrackFactory(row: Track(.fixed(20), align: .bottom)),
+			arrangement: .tight,
+			cells: [cell]
 		)
 
 		grid.draw(
@@ -63,10 +63,10 @@ struct GridRenderingTests {
 	func gridAlignmentPositionsRenderedGrid() {
 		let cell = DrawingElement(size: CGSize(width: 10, height: 10))
 		let grid = Grid(
-			cols: [Track(.fixed(50))],
-			rows: TrackFactory(Track(.fixed(20))),
-			cells: [cell],
-			layout: .tight
+			cols: .init([Track(.fixed(50))]),
+			rows: TrackFactory(row: Track(.fixed(20))),
+			arrangement: .tight,
+			cells: [cell]
 		)
 
 		grid.draw(
@@ -91,18 +91,18 @@ struct GridRenderingTests {
 		var renderedCells: [Grid.CellIteration] = []
 
 		let grid = Grid(
-			cols: [
+			cols: .init([
 				Track(.fixed(20), gap: 5),
 				Track(.fixed(30))
-			],
-			rows: TrackFactory(Track(.fixed(10))),
+			]),
+			rows: TrackFactory(row: Track(.fixed(10))),
 			render: .init(
 				column: { columns.append($0) },
 				row: { rows.append($0) },
 				cell: { renderedCells.append($0) }
 			),
-			cells: cells,
-			layout: .gaps
+			arrangement: .gaps,
+			cells: cells
 		)
 
 		grid.draw(
@@ -131,10 +131,10 @@ struct GridRenderingTests {
 		var rendered: [Grid.CellIteration] = []
 
 		let grid = Grid(
-			cols: [Track(.fixed(20))],
+			cols: .init([Track(.fixed(20))]),
 			render: .init(cell: { rendered.append($0) }),
-			cells: [cell],
-			layout: .tight
+			arrangement: .tight,
+			cells: [cell]
 		)
 
 		grid.draw(
@@ -153,13 +153,13 @@ struct GridRenderingTests {
 		var callbackCount = 0
 
 		let grid = Grid(
-			cols: [Track(.fixed(20))],
+			cols: .init([Track(.fixed(20))]),
 			render: .init(cell: {
 				callbackCount += 1
 				$0.render()
 			}),
-			cells: [cell],
-			layout: .tight
+			arrangement: .tight,
+			cells: [cell]
 		)
 
 		grid.draw(
@@ -180,14 +180,14 @@ struct GridRenderingTests {
 		var cellCount = 0
 
 		let grid = Grid(
-			cols: [],
+			cols: .init([]),
 			render: .init(
 				column: { _ in columnCount += 1 },
 				row: { _ in rowCount += 1 },
 				cell: { _ in cellCount += 1 }
 			),
-			cells: [],
-			layout: .tight
+			arrangement: .tight,
+			cells: []
 		)
 
 		grid.draw(

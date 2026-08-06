@@ -4,12 +4,12 @@ import UIKit
 public struct JCSImage: JCSLayoutElement {
 	public let source: ImageSource
 	public let cornerRadius: CGFloat
-	public let aspect: JCSAspect
+	public let aspect: Aspect
 	public let image: UIImage?
 
 	public init(
 		_ source: ImageSource,
-		aspect: JCSAspect = .fit,
+		aspect: Aspect = .fit,
 		cornerRadius: CGFloat = 0.0
 	) {
 		self.source = source

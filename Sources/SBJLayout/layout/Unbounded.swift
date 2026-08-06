@@ -51,8 +51,8 @@ public extension CGRect {
 		.init(
 			x: minX.isUnbounded ? minX : minX + left,
 			y: minY.isUnbounded ? minY : minY + top,
-			width: maxX.isUnbounded ? maxX : maxX - (left - right),
-			height: maxY.isUnbounded ? maxY : maxY - (top - bottom)
+			width: width.isUnbounded ? width : width - left - right,
+			height: height.isUnbounded ? height : height - top - bottom
 		)
 	}
 }
