@@ -20,7 +20,7 @@ public final class GridLayout<Element: TrackElement> {
 	private var measurementRevision: UInt = 0
 
 	public init(
-		columns: [Track],
+		columns: TrackFactory,
 		rows: TrackFactory = .init(),
 		cells: [Element],
 		layout: TrackArrangement = .gaps
@@ -32,15 +32,8 @@ public final class GridLayout<Element: TrackElement> {
 			layout: layout
 		)
 		self.definition = definition
-		self.columns = TrackLayout(
-			tracks: definition.columnTracks,
-			layout: definition.arrangement
-		)
-		self.rows = TrackLayout(
-			factory: definition.rowFactory.def,
-			count: definition.rowCount,
-			layout: definition.arrangement
-		)
+		self.columns = definition.columnLayout
+		self.rows = definition.rowLayout
 		self.measurements = Array(repeating: nil, count: definition.cells.count)
 	}
 
@@ -68,12 +61,17 @@ public final class GridLayout<Element: TrackElement> {
 	}
 
 	private func intrinsicColumnWidth(_ column: Int, _ track: Track, _ bound: CGFloat) -> CGFloat {
-		var width: CGFloat = 0
+		let reduce = track.aggregate
+		var acc: CGFloat? = nil
 		definition.forEachCell(inColumn: column) { index in
-			let size = measureElement(at: index, bounds: CGSize(width: bound, height: .unbounded))
-			width = Swift.max(width, size.width)
+			let candidate = measureElement(at: index, bounds: CGSize(width: bound, height: .unbounded)).width
+			if let current = acc{
+				acc = reduce(current, candidate)
+			} else {
+				acc = candidate
+			}
 		}
-		return width
+		return acc ?? 0
 	}
 
 	private func measureElementsForResolvedColumns() {
@@ -95,12 +93,18 @@ public final class GridLayout<Element: TrackElement> {
 		}
 	}
 
-	private func intrinsicRowHeight(_ row: Int, _ track: Track, _ bound: CGFloat) -> CGFloat {
-		var height: CGFloat = 0
+	private func intrinsicRowHeight(_ row: Int, track: Track, _ bound: CGFloat) -> CGFloat {
+		let reduce = track.aggregate
+		var acc: CGFloat? = nil
 		definition.forEachCell(inRow: row) { index in
-			height = max(height, measurements[index]?.size.height ?? 0)
+			let candidate = measurements[index]?.size.height
+			if let current = acc, let candidate {
+				acc = reduce(current, candidate)
+			} else {
+				acc = candidate
+			}
 		}
-		return height
+		return acc ?? 0
 	}
 
 	private func canReuseIntrinsicMeasurement(at index: Int, resolvedWidth: CGFloat) -> Bool {
@@ -133,3 +137,4 @@ public final class GridLayout<Element: TrackElement> {
 		return size
 	}
 }
+

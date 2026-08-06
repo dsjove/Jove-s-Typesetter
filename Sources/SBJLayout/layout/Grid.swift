@@ -1,22 +1,29 @@
 import CoreGraphics
 // TODO: Feature - Pagination policies
 // TODO: Feature - Pivot Table
-// TODO: Feature - column spans and column mapping (CustomColumns)
 // TODO: Feature - Wrapping
 //     wrapped(v) - hits bottom, sets y = 0 and x+=width, measured width needs to account
 //     wrapped(h) - hits right, sets x = 0 and y+=height, measured height needs to account
+// TODO: Bug - min rows have intrinsic size of 0
+// TODO: API - create identifiable reducers and groupings for uniform
+
+// Remaining Custom Columns...
+// TODO: Feature - column spans and column mapping
+// TODO: Feature - gaps that fill
+// TODO: Feature - 'best fit' intrinsic size
+// TODO: Design - 'Identifiable' for optimized measurement recompute (not needed)
 
 public extension Grid {
 //MARK: Convenience inits
 	init(
-		horzFlow col: Column,
+		horzFlow col: Column, wrapped at: Int? = nil,
 		rows: Rows = .init(align: .left),
 		render: ((ColumnIteration)->())? = nil,
 		@JCSLayoutElementBuilder cells: ()->Cells
 	) {
 		let cells = cells()
 		self.init(
-			cols: Array(repeating: col, count: cells.count),
+			cols: Array(repeating: col, count: at ?? cells.count),
 			rows: rows,
 			render: .init(column: render),
 			cells: cells)
@@ -59,6 +66,7 @@ public extension Grid {
 public extension GridDefinition<TrackedElement>.CellIteration {
 	func render() {
 		cell?.element.draw(in: rect, measured: content, align: alignment)
+		//JCSRect(fill: .clear, stroke: .red , lineWidth: 0.5, radius: 0).draw(in: rect)
 	}
 }
 
@@ -118,7 +126,7 @@ public struct Grid: JCSLayoutElement {
 	) {
 		self.render = render
 		self.layout = .init(
-			columns: cols,
+			columns: .init(cols),
 			rows: rows,
 			cells: cells.map(TrackedElement.init),
 			layout: layout)
@@ -144,6 +152,7 @@ public struct Grid: JCSLayoutElement {
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
 		let definition = layout.measure(bounds: measured)
 		let positioned = align.apply(size: definition.size, in: allocated)
+		//JCSRect(fill: .clear, stroke: .blue.withAlphaComponent(0.5) , lineWidth: 1.5, radius: 0).draw(in: positioned)
 		definition.iterate(
 			allocated: positioned,
 			column: render.column,

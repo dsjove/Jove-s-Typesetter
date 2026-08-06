@@ -22,7 +22,7 @@ public struct GridDefinition<Cell: TrackElement> {
 	}
 
 	// Grid specification.
-	public let columnTracks: [Track]
+	public let columnFactory: TrackFactory
 	public let rowFactory: TrackFactory
 	public let cells: [Cell]
 	public let arrangement: TrackArrangement
@@ -34,17 +34,17 @@ public struct GridDefinition<Cell: TrackElement> {
 	public let bounds: CGSize?
 
 	public init(
-		columns: [Track],
+		columns: TrackFactory,
 		rows: TrackFactory = .init(),
 		cells: [Cell],
 		layout: TrackArrangement = .gaps
 	) {
 		self.init(
-			columnTracks: columns,
+			columnFactory: columns,
 			rowFactory: rows,
 			cells: cells,
 			arrangement: layout,
-			columns: .init(tracks: columns),
+			columns: .init(),
 			rows: .init(),
 			measured: Array(repeating: .zero, count: cells.count),
 			bounds: nil
@@ -52,7 +52,7 @@ public struct GridDefinition<Cell: TrackElement> {
 	}
 
 	private init(
-		columnTracks: [Track],
+		columnFactory: TrackFactory,
 		rowFactory: TrackFactory,
 		cells: [Cell],
 		arrangement: TrackArrangement,
@@ -61,7 +61,7 @@ public struct GridDefinition<Cell: TrackElement> {
 		measured: [CGSize],
 		bounds: CGSize?
 	) {
-		self.columnTracks = columnTracks
+		self.columnFactory = columnFactory
 		self.rowFactory = rowFactory
 		self.cells = cells
 		self.arrangement = arrangement
@@ -71,7 +71,23 @@ public struct GridDefinition<Cell: TrackElement> {
 		self.bounds = bounds
 	}
 
-	public var columnCount: Int { columnTracks.count }
+	public var columnCount: Int {
+		columnFactory.max - columnFactory.min + 1
+	}
+
+	public var columnLayout: TrackLayout {
+		.init(
+			factory: columnFactory.def,
+			count: columnCount,
+			layout: arrangement)
+	}
+
+	public var rowLayout: TrackLayout {
+		.init(
+			factory: rowFactory.def,
+			count: rowCount,
+			layout: arrangement)
+	}
 
 	public var wantedRowCount: Int {
 		columnCount > 0 ? (cells.count + columnCount - 1) / columnCount : 0
@@ -100,7 +116,7 @@ public struct GridDefinition<Cell: TrackElement> {
 		measured: [CGSize]
 	) -> Self {
 		.init(
-			columnTracks: columnTracks,
+			columnFactory: columnFactory,
 			rowFactory: rowFactory,
 			cells: cells,
 			arrangement: arrangement,
