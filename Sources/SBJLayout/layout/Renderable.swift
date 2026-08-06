@@ -1,14 +1,20 @@
 import CoreGraphics
 
-public protocol JCSLayoutElement: TrackElement {
+public protocol Renderable: TrackElement {
 	// allocated and contentSize with unbounded values is undefined
 	func draw(in allocated: CGRect, measured: CGSize, align: Alignment)
 
 	var page: Pagination { get }
 }
 
-public extension JCSLayoutElement {
-	// Does not measure, uses alloacted size if no measurement supplied
+nonisolated(unsafe) internal var layoutElementPage: Pagination = BasicPagination()
+
+public extension Renderable {
+	func measure() -> CGSize {
+		measure(bounds: .unbounded)
+	}
+
+	// Does not measure, uses allocated size if no measurement supplied
 	func draw(in allocated: CGRect, measured: CGSize? = nil, align: Alignment = .leftTop) {
 		draw(in: allocated, measured: measured ?? allocated.size, align: align)
 	}
@@ -27,10 +33,10 @@ public extension JCSLayoutElement {
 	}
 }
 
-public struct JCSEmptyDrawable: JCSLayoutElement {
+public struct EmptyRenderables: Renderable {
 	public let size: CGSize
 
-	public init (size: CGSize = .zero) {
+	public init(size: CGSize = .zero) {
 		self.size = size
 	}
 
@@ -43,13 +49,13 @@ public struct JCSEmptyDrawable: JCSLayoutElement {
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {}
 }
 
-public typealias JCSLayoutElements = [any JCSLayoutElement]
+public typealias Renderables = [any Renderable]
 
 @resultBuilder
-public struct JCSLayoutElementBuilder {
-	public typealias Component = JCSLayoutElements
+public struct RenderableBuilder {
+	public typealias Component = Renderables
 
-	public static func buildExpression<T: JCSLayoutElement>(
+	public static func buildExpression<T: Renderable>(
 		_ expression: T
 	) -> Component {
 		[expression]
@@ -61,11 +67,18 @@ public struct JCSLayoutElementBuilder {
 		expression
 	}
 
-	public static func buildExpression<T: JCSLayoutElement>(
+	public static func buildExpression<T: Renderable>(
 		_ expression: [T]
 	) -> Component {
-		expression.map { $0 as any JCSLayoutElement }
+		expression.map { $0 as any Renderable }
 	}
+
+	public static func buildExpression<T: Renderable>(
+		_ expression: [[T]]
+	) -> Component {
+		expression.flatMap { $0 }.map { $0 as any Renderable }
+	}
+
 	public static func buildBlock(
 		_ components: Component...
 	) -> Component {

@@ -5,14 +5,22 @@ import CoreGraphics
 //     wrapped(v) - hits bottom, sets y = 0 and x+=width, measured width needs to account
 //     wrapped(h) - hits right, sets x = 0 and y+=height, measured height needs to account
 //     header duplication?
-// TODO: Feature - identifiable reducers and groupings for uniform tracks
+// TODO: Feature - identifiable reducers and groupings for uniform Tracks
+// TODO: Feature - cross grid sizing sync
 
 // Remaining Custom Columns...
-// TODO: Feature - column-header/row-leader (track property) spans
+// TODO: Feature - Spans
 // TODO: Feature - dynamic gaps that fill (like SwiftUI spacer)
 // TODO: Feature - 'best fit' intrinsic size (allow 3, algorithm TBD)
 // TODO: Not Needed - Identifiable and Hashable cells for optimized measurements recompute
 // TODO: Not Needed - Split/StickyCol tables (independantly scrollable areas)
+/*
+If we need this to scale for dynamic live large sets of data
+1) Cells need to become hashable so we can effectly detect content changes for remeasuring
+2) Cells need to become identifiable so we can track movement (sorting, column mapping, adding, removing)
+3) Then we need to detect if the change requires invalidating measurements or just redraw
+4) The changes need to be additive and throttled to a f/s
+*/
 
 public extension Grid {
 //MARK: Convenience inits
@@ -77,7 +85,7 @@ public extension Grid {
 public extension GridDefinition<TrackedElement>.CellIteration {
 	func render() {
 		cell?.element.draw(in: rect, measured: content, align: alignment)
-//JCSRect(fill: .clear, stroke: .red , lineWidth: 0.5, radius: 0).draw(in: rect)
+//JCSRect(stroke: .red , lineWidth: 0.5).draw(in: rect)
 	}
 }
 
@@ -165,7 +173,7 @@ public struct Grid: JCSLayoutElement {
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
 		let definition = layout.measure(bounds: measured)
 		let positioned = align.apply(size: definition.size, in: allocated)
-//JCSRect(fill: .clear, stroke: .blue.withAlphaComponent(0.5) , lineWidth: 1.5, radius: 0).draw(in: positioned)
+//JCSRect(stroke: .blue.withAlphaComponent(0.5) , lineWidth: 1.5).draw(in: positioned)
 		definition.iterate(
 			allocated: positioned,
 			column: render.column,

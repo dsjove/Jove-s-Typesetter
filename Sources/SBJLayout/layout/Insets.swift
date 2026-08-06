@@ -6,11 +6,23 @@ public struct Insets: Sendable, Codable, CustomStringConvertible {
 	public let top: CGFloat
 	public let bottom: CGFloat
 
-	public init(left: CGFloat = 0, right: CGFloat = 0, top: CGFloat = 0, bottom: CGFloat = 0) {
+	public init(
+		left: CGFloat = 0,
+		right: CGFloat = 0,
+		top: CGFloat = 0,
+		bottom: CGFloat = 0
+	) {
 		self.left = left
 		self.right = right
 		self.top = top
 		self.bottom = bottom
+	}
+
+	public init(
+		dx: CGFloat = 0,
+		dy: CGFloat = 0
+	) {
+		self.init(left: dx, right: dx, top: dy, bottom: dy)
 	}
 
 	public var description: String {

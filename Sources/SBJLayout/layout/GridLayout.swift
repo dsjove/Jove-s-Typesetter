@@ -65,10 +65,12 @@ public final class GridLayout<Element: TrackElement> {
 		var acc: CGFloat? = nil
 		definition.forEachCell(inColumn: column) { index in
 			let candidate = measureElement(at: index, bounds: CGSize(width: bound, height: .unbounded)).width
-			if let current = acc{
-				acc = reduce(current, candidate)
-			} else {
-				acc = candidate
+			if candidate > 0.0 {
+				if let current = acc {
+					acc = reduce(current, candidate)
+				} else {
+					acc = candidate
+				}
 			}
 		}
 		return acc ?? 0
@@ -98,10 +100,12 @@ public final class GridLayout<Element: TrackElement> {
 		var acc: CGFloat? = nil
 		definition.forEachCell(inRow: row) { index in
 			let candidate = measurements[index]?.size.height
-			if let current = acc, let candidate {
-				acc = reduce(current, candidate)
-			} else {
-				acc = candidate
+			if let candidate, candidate >= 0 {
+				if let current = acc {
+					acc = reduce(current, candidate)
+				} else {
+					acc = candidate
+				}
 			}
 		}
 		return acc ?? 0

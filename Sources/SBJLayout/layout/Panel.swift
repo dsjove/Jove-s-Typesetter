@@ -6,7 +6,7 @@ public struct Panel<C: JCSLayoutElement>: JCSLayoutElement {
 	//TODO: Aspect
 	//TODO: min/max sizes
 	let background: JCSRect
-	let content: JCSLayoutElement
+	let content: C
 
 	public init(
 		insets: Insets = .init(),

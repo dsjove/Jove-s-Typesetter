@@ -5,6 +5,12 @@ public protocol TrackElement {
 	func measure(bounds: CGSize) -> CGSize
 }
 
+public extension TrackElement {
+	func measure() -> CGSize {
+		measure(bounds: .unbounded)
+	}
+}
+
 public struct TrackedElement: TrackElement {
 	public let element: any JCSLayoutElement
 
@@ -17,3 +23,4 @@ public struct TrackedElement: TrackElement {
 		element.measure(bounds: bounds)
 	}
 }
+
