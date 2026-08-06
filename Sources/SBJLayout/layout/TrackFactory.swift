@@ -17,7 +17,13 @@ public struct TrackFactory {
 	}
 
 	public init(
-		_ track: Track,
+		col track: Track
+	) {
+		self.init(min: 1, max: 1) { _ in track }
+	}
+
+	public init(
+		row track: Track,
 		min: Int = 0,
 		max: Int = Int.max
 	) {
@@ -25,9 +31,10 @@ public struct TrackFactory {
 	}
 
 	public init(
-		_ tracks: [Track]
+		_ tracks: [Track],
+		map: ((Int)->Int)? = nil
 	) {
-		self.init(min: 1, max: tracks.count) { tracks[$0] }
+		self.init(min: 1, max: tracks.count) { idx in tracks[map.map{$0(idx)} ?? idx] }
 	}
 
 	public init(

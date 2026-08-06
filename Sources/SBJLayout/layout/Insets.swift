@@ -22,4 +22,12 @@ public struct Insets: Sendable, Codable, CustomStringConvertible {
 			dx: (left + right) * (inverse ? -1 : 1),
 			dy: (top + bottom) * (inverse ? -1 : 1))
 	}
+
+	public func apply(rect: CGRect, inverse: Bool = false) -> CGRect {
+		rect.inset(
+			left: left * (inverse ? -1 : 1),
+			top: top * (inverse ? -1 : 1),
+			right: right * (inverse ? -1 : 1),
+			bottom: bottom * (inverse ? -1 : 1))
+	}
 }

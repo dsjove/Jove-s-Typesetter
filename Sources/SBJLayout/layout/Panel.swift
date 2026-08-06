@@ -38,8 +38,7 @@ public struct Panel<C: JCSLayoutElement>: JCSLayoutElement {
 
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
 		background.draw(in: allocated)
-		let contentSize = insets.apply(size: allocated.size)
-		let positioned = align.apply(size: contentSize, in: allocated)
+		let positioned = insets.apply(rect: allocated)
 		content.draw(in: positioned, measured: measured, align: align)
 	}
 }

@@ -8,10 +8,10 @@ import CoreGraphics
 // TODO: API - create identifiable reducers and groupings for uniform
 
 // Remaining Custom Columns...
-// TODO: Feature - column spans and column mapping
+// TODO: Feature - column spans
 // TODO: Feature - gaps that fill
 // TODO: Feature - 'best fit' intrinsic size
-// TODO: Design - 'Identifiable' for optimized measurement recompute (not needed)
+// TODO: Design - 'Identifiable' and 'hashable' for optimized measurement recompute (not needed)
 
 public extension Grid {
 //MARK: Convenience inits
@@ -23,7 +23,7 @@ public extension Grid {
 	) {
 		let cells = cells()
 		self.init(
-			cols: Array(repeating: col, count: at ?? cells.count),
+			cols: .init(Array(repeating: col, count: at ?? cells.count)),
 			rows: rows,
 			render: .init(column: render),
 			cells: cells)
@@ -37,14 +37,14 @@ public extension Grid {
 	) {
 		let cells = cells()
 		self.init(
-			cols: [col],
+			cols: .init(col: col),
 			rows: rows,
 			render: .init(row: render),
 			cells: cells)
 	}
 
 	init(
-		table: Columns,
+		table cols: [Column], columnMap: ((Int)->Int)? = nil,
 		header: Track? = nil,
 		rows: TrackFactory = .init(),
 		@JCSLayoutElementBuilder cells: ()->Cells,
@@ -52,7 +52,7 @@ public extension Grid {
 	) {
 		let cells = cells()
 		self.init(
-			cols: table,
+			cols: .init(cols, map: columnMap),
 			rows: .init(
 				min: rows.min,
 				max: rows.max,
@@ -75,7 +75,7 @@ public struct Grid: JCSLayoutElement {
 	public typealias Layout = GridLayout<TrackedElement>
 	public typealias Definition = GridDefinition<TrackedElement>
 	public typealias Column = Track
-	public typealias Columns = [Column]
+	public typealias Columns = TrackFactory
 	public typealias Row = Track
 	public typealias Rows = TrackFactory
 	public typealias Cell = JCSLayoutElement
@@ -126,7 +126,7 @@ public struct Grid: JCSLayoutElement {
 	) {
 		self.render = render
 		self.layout = .init(
-			columns: .init(cols),
+			columns: cols,
 			rows: rows,
 			cells: cells.map(TrackedElement.init),
 			layout: layout)

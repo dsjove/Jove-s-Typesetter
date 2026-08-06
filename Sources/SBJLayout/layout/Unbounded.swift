@@ -37,13 +37,22 @@ public extension CGSize {
 
 	func inset(dx: CGFloat, dy: CGFloat) -> CGSize {
 		.init(
-			width: width.isUnbounded ? width : width - dx*2,
-			height: height.isUnbounded ? height : height - dy*2,)
+			width: width.isUnbounded ? width : width - (dx * 2),
+			height: height.isUnbounded ? height : height - (dy * 2))
 	}
 }
 
 public extension CGRect {
 	init(x: CGFloat, y: CGFloat, size: CGSize) {
 		self.init(x: x, y: y, width: size.width, height: size.height)
+	}
+
+	func inset(left: CGFloat, top: CGFloat, right: CGFloat, bottom: CGFloat) -> CGRect {
+		.init(
+			x: minX.isUnbounded ? minX : minX + left,
+			y: minY.isUnbounded ? minY : minY + top,
+			width: maxX.isUnbounded ? maxX : maxX - (left - right),
+			height: maxY.isUnbounded ? maxY : maxY - (top - bottom)
+		)
 	}
 }
