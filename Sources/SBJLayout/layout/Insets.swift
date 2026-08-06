@@ -1,6 +1,6 @@
 import CoreGraphics
 
-public struct JCSInsets: Sendable, Codable, CustomStringConvertible {
+public struct Insets: Sendable, Codable, CustomStringConvertible {
 	public let left: CGFloat
 	public let right: CGFloat
 	public let top: CGFloat
@@ -15,5 +15,11 @@ public struct JCSInsets: Sendable, Codable, CustomStringConvertible {
 
 	public var description: String {
 		"(left: \(left), right: \(right), top: \(top), bottom: \(bottom))"
+	}
+
+	public func apply(size: CGSize, inverse: Bool = false) -> CGSize {
+		size.inset(
+			dx: (left + right) * (inverse ? -1 : 1),
+			dy: (top + bottom) * (inverse ? -1 : 1))
 	}
 }

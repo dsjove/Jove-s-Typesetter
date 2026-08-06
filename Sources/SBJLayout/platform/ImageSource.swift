@@ -1,7 +1,7 @@
 import CoreGraphics
 import UIKit
 
-public enum JCSImageSource: Sendable {
+public enum ImageSource: Sendable {
 	case none
 	case bundled(String, Bundle? = nil)
 	case system(String)

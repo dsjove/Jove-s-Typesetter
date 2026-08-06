@@ -2,13 +2,13 @@ import CoreGraphics
 import UIKit
 
 public struct JCSImage: JCSLayoutElement {
-	public let source: JCSImageSource
+	public let source: ImageSource
 	public let cornerRadius: CGFloat
 	public let aspect: JCSAspect
 	public let image: UIImage?
 
 	public init(
-		_ source: JCSImageSource,
+		_ source: ImageSource,
 		aspect: JCSAspect = .fit,
 		cornerRadius: CGFloat = 0.0
 	) {

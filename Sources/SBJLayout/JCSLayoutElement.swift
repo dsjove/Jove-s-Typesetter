@@ -34,10 +34,19 @@ public extension JCSLayoutElement {
 }
 
 public struct JCSEmptyDrawable: JCSLayoutElement {
-	public func measure(bounds: CGSize) -> CGSize { .zero }
-	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {}
+	public let size: CGSize
 
-	public init() {}
+	public init (size: CGSize = .zero) {
+		self.size = size
+	}
+
+	public func measure(bounds: CGSize) -> CGSize {
+		CGSize(
+			width: size.width.isUnbounded ? size.width : bounds.width,
+			height: size.height.isUnbounded ? size.height : bounds.height)
+	}
+
+	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {}
 }
 
 public typealias JCSLayoutElements = [any JCSLayoutElement]

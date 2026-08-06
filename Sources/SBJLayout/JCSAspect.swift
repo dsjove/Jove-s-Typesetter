@@ -22,15 +22,31 @@ public enum JCSAspect: Int, Sendable, Codable, CustomStringConvertible {
 	public func apply(size: CGSize, in bounds: CGSize) -> CGSize {
 		switch self {
 		case .fit, .fill:
-			let scaleX = bounds.width / size.width
-			let scaleY = bounds.height / size.height
-			let scale = (self == .fit) ? min(scaleX, scaleY) : max(scaleX, scaleY)
-			let w = size.width * scale
-			let h = size.height * scale
-			return .init(width: w, height: h)
+			let widthUnbounded = bounds.width.isUnbounded
+			let heightUnbounded = bounds.height.isUnbounded
+			if widthUnbounded && heightUnbounded {
+				return size
+			} else if widthUnbounded {
+				let scale = bounds.height / size.height
+				let w = size.width * scale
+				let h = bounds.height
+				return .init(width: w, height: h)
+			} else if heightUnbounded {
+				let scale = bounds.width / size.width
+				let w = bounds.width
+				let h = size.height * scale
+				return .init(width: w, height: h)
+			} else {
+				let scaleX = bounds.width / size.width
+				let scaleY = bounds.height / size.height
+				let scale = (self == .fit) ? min(scaleX, scaleY) : max(scaleX, scaleY)
+				let w = size.width * scale
+				let h = size.height * scale
+				return .init(width: w, height: h)
+			}
 		case .stretch:
-			let w = bounds.width
-			let h = bounds.height
+			let w = bounds.width.isUnbounded ? size.width : bounds.width
+			let h = bounds.height.isUnbounded ? size.height : bounds.height
 			return .init(width: w, height: h)
 		case .original:
 			let w = size.width
