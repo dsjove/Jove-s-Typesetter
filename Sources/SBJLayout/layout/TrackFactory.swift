@@ -1,8 +1,10 @@
 import CoreGraphics
 
 public struct TrackFactory {
-	let min: Int
-	let max: Int
+	public static let placeholderIndex = -1
+
+	let minCount: Int
+	let maxCount: Int
 	let def: (Int)->Track
 
 	public init(
@@ -10,42 +12,49 @@ public struct TrackFactory {
 		align: Alignment = .top,
 		gap: CGFloat = 2.0,
 		aggregate: @escaping (CGFloat, CGFloat) -> CGFloat = Swift.max,
-		min: Int = 0,
-		max: Int = Int.max
+		minCount: Int = 0,
+		maxCount: Int = Int.max
 	) {
-		self.init(min: min, max: max) { _ in .init(length, align: align, gap: gap, aggregate: aggregate) }
+		self.init(minCount: minCount, maxCount: maxCount) { _ in
+			.init(length, align: align, gap: gap, aggregate: aggregate)
+		}
 	}
 
 	public init(
 		col track: Track
 	) {
-		self.init(min: 1, max: 1) { _ in track }
+		self.init(minCount: 1, maxCount: 1) { _ in track }
 	}
 
 	public init(
 		row track: Track,
-		min: Int = 0,
-		max: Int = Int.max
+		minCount: Int = 0,
+		maxCount: Int = Int.max
 	) {
-		self.init(min: min, max: max) { _ in track }
+		self.init(minCount: minCount, maxCount: maxCount) { _ in track }
 	}
 
 	public init(
 		_ tracks: [Track],
-		map: ((Int)->Int)? = nil
+		map: ((Int) -> Int)? = nil
 	) {
-		self.init(min: 1, max: tracks.count) { idx in tracks[map.map{$0(idx)} ?? idx] }
+		self.init(
+			minCount: tracks.isEmpty ? 0 : 1,
+			maxCount: tracks.count
+		) { index in
+			tracks[map.map { $0(index) } ?? index]
+		}
 	}
 
 	public init(
-		min: Int = 0,
-		max: Int = Int.max,
+		minCount: Int = 0,
+		maxCount: Int = Int.max,
 		def: @escaping (Int) -> Track
 	) {
-		let min = Swift.max(0, min)
-		let max = Swift.max(0, max)
-		self.min = min
-		self.max = Swift.max(min, max)
+		let minCount = Swift.max(0, minCount)
+		let maxCount = Swift.max(0, maxCount)
+		self.minCount = minCount
+		self.maxCount = Swift.max(minCount, maxCount)
 		self.def = def
 	}
 }

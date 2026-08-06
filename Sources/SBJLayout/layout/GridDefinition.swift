@@ -72,7 +72,8 @@ public struct GridDefinition<Cell: TrackElement> {
 	}
 
 	public var columnCount: Int {
-		columnFactory.max - columnFactory.min + 1
+		guard columnFactory.maxCount > 0 else { return 0 }
+		return columnFactory.maxCount - columnFactory.minCount + 1
 	}
 
 	public var columnLayout: TrackLayout {
@@ -84,7 +85,9 @@ public struct GridDefinition<Cell: TrackElement> {
 
 	public var rowLayout: TrackLayout {
 		.init(
-			factory: rowFactory.def,
+			factory: { index in
+				rowFactory.def(index < wantedRowCount ? index : TrackFactory.placeholderIndex)
+			},
 			count: rowCount,
 			layout: arrangement)
 	}
@@ -94,11 +97,11 @@ public struct GridDefinition<Cell: TrackElement> {
 	}
 
 	public var rowCount: Int {
-		max( 0, max(rowFactory.min, Swift.min(rowFactory.max, wantedRowCount)))
+		max(0, max(rowFactory.minCount, Swift.min(rowFactory.maxCount, wantedRowCount)))
 	}
 
 	public var cellCount: Int {
-		rowFactory.max > 0 ? min(cells.count, rowCount * columnCount) : 0
+		rowFactory.maxCount > 0 ? min(cells.count, rowCount * columnCount) : 0
 	}
 
 	public var isEmpty: Bool {

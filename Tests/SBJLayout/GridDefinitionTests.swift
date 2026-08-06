@@ -23,8 +23,8 @@ struct GridDefinitionTests {
 		],
 		rows rowFactory: TrackFactory = .init(
 			row: Track(.fixed(10), align: .bottom, gap: 3),
-			min: 2,
-			max: 2,
+			minCount: 2,
+			maxCount: 2,
 		),
 		cells: [Element]? = nil,
 		layout: TrackArrangement = .gaps
@@ -62,8 +62,8 @@ struct GridDefinitionTests {
 		let cells = (0..<3).map { _ in Element() }
 		let rows = TrackFactory(
 			row: Track(.intrinsic()),
-			min: 1,
-			max: 4)
+			minCount: 1,
+			maxCount: 4)
 		let columns = TrackFactory(
 			[Track(.fixed(10)), Track(.fill())]
 		)
@@ -74,7 +74,7 @@ struct GridDefinitionTests {
 			arrangement: .tight
 		)
 
-		#expect(definition.columnFactory.max - definition.columnFactory.min + 1 == 2)
+		#expect(definition.columnFactory.maxCount - definition.columnFactory.minCount + 1 == 2)
 		#expect(definition.cells.count == 3)
 		#expect(definition.arrangement == .tight)
 		#expect(definition.columns.tracks.isEmpty)
@@ -89,7 +89,7 @@ struct GridDefinitionTests {
 		let cells = (0..<5).map { _ in Element() }
 		let definition = GridDefinition(
 			columns: .init([Track(.fixed(1)), Track(.fixed(1))]),
-			rows: .init(row: Track(.fixed(1)), min: 1, max: 2),
+			rows: .init(row: Track(.fixed(1)), minCount: 1, maxCount: 2),
 			cells: cells,
 			arrangement: .tight
 		)
@@ -105,7 +105,7 @@ struct GridDefinitionTests {
 	func minimumRowsCreateEmptyRows() {
 		let definition = GridDefinition(
 			columns: .init([Track(.fixed(1))]),
-			rows: .init(row: Track(.fixed(1)), min: 3, max: 5),
+			rows: .init(row: Track(.fixed(1)), minCount: 3, maxCount: 5),
 			cells: [Element()],
 			arrangement: .tight
 		)
@@ -134,7 +134,7 @@ struct GridDefinitionTests {
 	func zeroMaximumRows() {
 		let definition = GridDefinition(
 			columns: .init([Track(.fixed(1))]),
-			rows: .init(row: Track(.fixed(1)), min: 0, max: 0),
+			rows: .init(row: Track(.fixed(1)), minCount: 0, maxCount: 0),
 			cells: [Element()],
 			arrangement: .tight
 		)
@@ -184,7 +184,7 @@ struct GridDefinitionTests {
 		let cells = (0..<5).map { _ in Element() }
 		let definition = GridDefinition(
 			columns: .init([Track(.fixed(1)), Track(.fixed(1))]),
-			rows: .init(row: Track(.fixed(1)), min: 0, max: 2),
+			rows: .init(row: Track(.fixed(1)), minCount: 0, maxCount: 2),
 			cells: cells,
 			arrangement: .tight
 		)
@@ -204,7 +204,7 @@ struct GridDefinitionTests {
 		let cells = (0..<3).map { _ in Element() }
 		let definition = GridDefinition(
 			columns: .init([Track(.fixed(1)), Track(.fixed(1))]),
-			rows: .init(row: Track(.fixed(1)), min: 0, max: 1),
+			rows: .init(row: Track(.fixed(1)), minCount: 0, maxCount: 1),
 			cells: cells,
 			arrangement: .tight
 		).resolving(
@@ -391,8 +391,8 @@ struct GridDefinitionTests {
 			Track(.fixed(30))
 		]
 		let rowFactory = TrackFactory(
-			min: 2,
-			max: 2,
+			minCount: 2,
+			maxCount: 2,
 			def: { index in
 				index == 0 ? Track(.fixed(10)) : Track(.fixed(0))
 			}

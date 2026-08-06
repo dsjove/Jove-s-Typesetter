@@ -215,7 +215,7 @@ struct GridLayoutTests {
 				Track(.fixed(20)),
 				Track(.fixed(20))
 			]),
-			rows: .init(row: Track(.intrinsic()), min: 0, max: 2),
+			rows: .init(row: Track(.intrinsic()), minCount: 0, maxCount: 2),
 			cells: cells,
 			arrangement: .tight
 		)
@@ -288,7 +288,7 @@ extension GridLayoutTests {
 			MeasuringElement(size: CGSize(width: 15, height: 6))
 		]
 		let layout = GridLayout(
-			columns: TrackFactory(.intrinsic(), aggregate: +, min: 1, max: 1),
+			columns: TrackFactory(.intrinsic(), aggregate: +, minCount: 1, maxCount: 1),
 			cells: cells,
 			arrangement: .tight
 		)
@@ -332,4 +332,57 @@ extension GridLayoutTests {
 
 		#expect(definition.columns.lengths == [30, 20, 10])
 	}
+
+	@Test("Minimum rows use the client-resolved placeholder sentinel")
+	func minimumRowsUseClientResolvedPlaceholderSentinel() {
+		let cell = MeasuringElement(size: CGSize(width: 10, height: 12))
+		var requestedRowIndices: [Int] = []
+		let placeholderHeight: CGFloat = 44
+		let rows = TrackFactory(minCount: 3) { index in
+			requestedRowIndices.append(index)
+			return index == TrackFactory.placeholderIndex
+				? Track(.intrinsic(min: placeholderHeight))
+				: Track(.intrinsic())
+		}
+		let layout = GridLayout(
+			columns: .init([Track(.fixed(10))]),
+			rows: rows,
+			cells: [cell],
+			arrangement: .tight
+		)
+
+		let definition = layout.measure(bounds: .unbounded)
+
+		#expect(definition.wantedRowCount == 1)
+		#expect(definition.rowCount == 3)
+		#expect(requestedRowIndices == [0, TrackFactory.placeholderIndex, TrackFactory.placeholderIndex])
+		#expect(definition.rows.lengths == [12, placeholderHeight, placeholderHeight])
+		#expect(definition.rows.size == 100)
+	}
+
+	@Test("Concrete rows never receive the placeholder sentinel")
+	func concreteRowsNeverReceivePlaceholderSentinel() {
+		let cells = (0..<3).map { _ in
+			MeasuringElement(size: CGSize(width: 10, height: 8))
+		}
+		var requestedRowIndices: [Int] = []
+		let rows = TrackFactory(minCount: 2, maxCount: 3) { index in
+			requestedRowIndices.append(index)
+			return Track(.intrinsic())
+		}
+		let layout = GridLayout(
+			columns: .init([Track(.fixed(10))]),
+			rows: rows,
+			cells: cells,
+			arrangement: .tight
+		)
+
+		let definition = layout.measure(bounds: .unbounded)
+
+		#expect(definition.wantedRowCount == 3)
+		#expect(definition.rowCount == 3)
+		#expect(requestedRowIndices == [0, 1, 2])
+		#expect(definition.rows.lengths == [8, 8, 8])
+	}
+
 }

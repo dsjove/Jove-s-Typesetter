@@ -6,12 +6,11 @@ import CoreGraphics
 //     wrapped(h) - hits right, sets x = 0 and y+=height, measured height needs to account
 //     header duplication?
 // TODO: Feature - identifiable reducers and groupings for uniform tracks
-// TODO: Bug - min (intentionally empty) rows/cols have intrinsic size of 0
 
 // Remaining Custom Columns...
-// TODO: Feature - column spans
-// TODO: Feature - gaps that fill
-// TODO: Feature - 'best fit' intrinsic size
+// TODO: Feature - column-header/row-leader (track property) spans
+// TODO: Feature - dynamic gaps that fill (like SwiftUI spacer)
+// TODO: Feature - 'best fit' intrinsic size (allow 3, algorithm TBD)
 // TODO: Not Needed - Identifiable and Hashable cells for optimized measurements recompute
 // TODO: Not Needed - Split/StickyCol tables (independantly scrollable areas)
 
@@ -66,8 +65,8 @@ public extension Grid {
 		self.init(
 			cols: .init(cols, map: columnMap),
 			rows: .init(
-				min: rows.min,
-				max: rows.max,
+				minCount: rows.minCount,
+				maxCount: rows.maxCount,
 				def: { if let header, $0 == 0 { header } else { rows.def($0) } }
 			),
 			render: .init(column: colRender, row: rowRender, cell: cellRender),
