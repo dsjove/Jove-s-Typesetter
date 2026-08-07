@@ -173,7 +173,9 @@ public struct Grid: JCSLayoutElement {
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
 		let definition = layout.measure(bounds: measured)
 		let positioned = align.apply(size: definition.size, in: allocated)
-//JCSRect(stroke: .blue.withAlphaComponent(0.5) , lineWidth: 1.5).draw(in: positioned)
+if id.isEmpty == false {
+	JCSRect(stroke: .blue.withAlphaComponent(0.5) , lineWidth: 1.5).draw(in: positioned)
+}
 		definition.iterate(
 			allocated: positioned,
 			column: render.column,

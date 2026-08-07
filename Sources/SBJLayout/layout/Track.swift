@@ -9,7 +9,7 @@ public struct Track {
 	public init(
 		_ length: TrackSize = .intrinsic(),
 		align: Alignment = .left, //Column centric
-		gap: CGFloat = 2.0,
+		gap: CGFloat = 4.0,
 		aggregate: @escaping (CGFloat, CGFloat) -> CGFloat = Swift.max
 	) {
 		self.length = length
