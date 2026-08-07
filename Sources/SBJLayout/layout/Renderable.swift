@@ -2,6 +2,7 @@ import CoreGraphics
 
 public protocol Renderable: TrackElement {
 	// allocated and contentSize with unbounded values is undefined
+	//TODO: add size class to measure/draw and replace JCSLayoutElement
 	func draw(in allocated: CGRect, measured: CGSize, align: Alignment)
 
 	var page: Pagination { get }

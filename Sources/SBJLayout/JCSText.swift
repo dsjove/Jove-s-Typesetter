@@ -4,37 +4,41 @@ import UIKit
 public struct JCSText: JCSLayoutElement {
 	public let text: String?
 	public let font: UIFont
-	public let color: UIColor
 	public let align: Alignment?
-	public let minLines: Int
-	public let maxLines: Int
-	public let content: NSMutableAttributedString?
+	public let lines: ClosedRange<Int>?
+	private let content: NSMutableAttributedString?
 // TODO: Bug - do copy-on-write for content member and cache measurement
 
 	public init(
-		_ text: String?,
-		font: UIFont = UIFont.systemFont(ofSize: 9.0),
-		color: UIColor = UIColor.black,
-		align: Alignment? = nil,
+		size font: UIFont?,
 		lines: Int
 	) {
-		self.init(text, font: font, color: color, align: align, minLines: lines, maxLines: lines)
+		self.init(nil as String?, font: font, lines: lines...lines)
+	}
+
+	public init(
+		_ text: CustomStringConvertible?,
+		font: UIFont?,
+		color: UIColor?,
+		align: Alignment? = nil,
+		lines: ClosedRange<Int>? = nil
+	) {
+		self.init(text?.description, font: font, color: color, align: align, lines: lines)
 	}
 
 	public init(
 		_ text: String?,
-		font: UIFont = UIFont.systemFont(ofSize: 9.0),
-		color: UIColor = UIColor.black,
+		font: UIFont? = nil,
+		color: UIColor? = nil,
 		align: Alignment? = nil,
-		minLines: Int = 0,
-		maxLines: Int = Int.max
+		lines: ClosedRange<Int>? = nil
 	) {
+		let font = font ?? UIFont.systemFont(ofSize: 9.0)
+		let color = color ?? UIColor.black
 		self.text = text
 		self.font = font
-		self.color = color
 		self.align = align
-		self.minLines = minLines
-		self.maxLines = maxLines
+		self.lines = lines
 
 		if let text, !text.isEmpty {
 			content = NSMutableAttributedString(string: text, attributes: [
@@ -49,9 +53,10 @@ public struct JCSText: JCSLayoutElement {
 	
 	public func measure(bounds: CGSize = .unbounded) -> CGSize {
 		guard let content else {
+			let lines = self.lines ?? 1...1
 			return CGSize(
 				width: 0.0,
-				height: ceil(CGFloat(minLines) * font.lineHeight))
+				height: ceil(CGFloat(lines.lowerBound) * font.lineHeight))
 		}
 		var measured = content.boundingRect(
 			with: bounds,
@@ -62,13 +67,15 @@ public struct JCSText: JCSLayoutElement {
 		if bounds.width != .unbounded {
 			measured.width = ceil(bounds.width)
 		}
-		if minLines > 1 {
-			let minHeight = ceil(CGFloat(minLines) * font.lineHeight)
-			measured.height = max(minHeight, measured.height)
-		}
-		if maxLines > 0 && maxLines != Int.max {
-			let maxHeight = ceil(CGFloat(maxLines) * font.lineHeight)
-			measured.height = min(maxHeight, measured.height)
+		if let lines {
+			if lines.lowerBound > 1 {
+				let minHeight = ceil(CGFloat(lines.lowerBound) * font.lineHeight)
+				measured.height = max(minHeight, measured.height)
+			}
+			if lines.upperBound > 0 && lines.upperBound != Int.max {
+				let maxHeight = ceil(CGFloat(lines.upperBound) * font.lineHeight)
+				measured.height = min(maxHeight, measured.height)
+			}
 		}
 		return measured
 	}

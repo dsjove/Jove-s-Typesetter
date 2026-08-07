@@ -8,18 +8,27 @@ import CoreGraphics
 // TODO: Feature - identifiable reducers and groupings for uniform Tracks
 // TODO: Feature - cross grid sizing sync
 
-// Remaining Custom Columns...
-// TODO: Feature - Spans
+// Custom Columns Features Remaining ...
+// TODO: Feature - Track Spans
 // TODO: Feature - dynamic gaps that fill (like SwiftUI spacer)
 // TODO: Feature - 'best fit' intrinsic size (allow 3, algorithm TBD)
-// TODO: Not Needed - Identifiable and Hashable cells for optimized measurements recompute
-// TODO: Not Needed - Split/StickyCol tables (independantly scrollable areas)
 /*
-If we need this to scale for dynamic live large sets of data
-1) Cells need to become hashable so we can effectly detect content changes for remeasuring
-2) Cells need to become identifiable so we can track movement (sorting, column mapping, adding, removing)
-3) Then we need to detect if the change requires invalidating measurements or just redraw
-4) The changes need to be additive and throttled to a f/s
+Custom Columns features not in scope...
+
+Dynamic live large sets of data
+1) Cell needs to become hashable so we can effectly detect content changes for remeasuring
+2) Cell needs to become identifiable so we can track movement (sorting, column mapping, adding, removing)
+3) Cells on init should become a factory like cols and rows
+4) Then we need to detect if the change requires invalidating measurements or just redraw
+5) The changes need to be additive and throttled to a f/s
+
+Sticky Columns (easily done today and may have use)
+1) GridLayout would need to know scroll position
+2) Iteration would have to be aware of -1 origin
+3) Track would need bool
+
+Split tables
+1) This would require a design change of 'origin groupings'
 */
 
 public extension Grid {
