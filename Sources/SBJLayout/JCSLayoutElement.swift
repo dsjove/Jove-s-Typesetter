@@ -72,6 +72,12 @@ public struct JCSLayoutElementBuilder {
 		components.flatMap { $0 }
 	}
 
+	public static func buildExpression<T: JCSLayoutElement>(
+		_ expression: [[T]]
+	) -> Component {
+		expression.flatMap { $0 }.map { $0 as any JCSLayoutElement }
+	}
+
 	public static func buildOptional(
 		_ component: Component?
 	) -> Component {

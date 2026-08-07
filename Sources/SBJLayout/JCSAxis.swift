@@ -2,6 +2,12 @@ import CoreGraphics
 
 //Useful?
 
+enum SizeClass {
+	case compact
+	case regular
+	case large
+}
+
 public enum JCSAPlacement {
 	case leading
 	case center
@@ -22,15 +28,7 @@ struct Position: Hashable, Identifiable {
 	var id: Self { self }
 }
 
-
-public enum JCSAxis: Int, Sendable, Codable, CustomStringConvertible {
+public enum JCSAxis {
 	case horizontal
 	case vertical
-
-	public var description: String {
-		switch self {
-		case .horizontal: "horizontal"
-		case .vertical: "vertical"
-		}
-	}
 }
