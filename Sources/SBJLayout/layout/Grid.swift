@@ -40,13 +40,15 @@ public extension Grid {
 		horzFlow col: Column, wrapped at: Int? = nil,
 		rows: Rows = .init(align: .left),
 		@JCSLayoutElementBuilder cells: ()->Cells,
-		render: ((ColumnIteration)->())? = nil,
+		colRender: ((ColumnIteration)->())? = nil,
+		rowRender: ((RowIteration)->())? = nil,
+		cellRender: ((CellIteration)->())? = nil
 	) {
 		let cells = cells()
 		self.init(
 			cols: .init(Array(repeating: col, count: at ?? cells.count)),
 			rows: rows,
-			render: .init(column: render),
+			render: .init(column: colRender, row: rowRender, cell: cellRender),
 			cells: cells)
 	}
 
@@ -54,13 +56,15 @@ public extension Grid {
 		vertFlow col: Column,
 		rows: Rows = .init(align: .centerY),
 		@JCSLayoutElementBuilder cells: ()->Cells,
-		render: ((RowIteration)->())? = nil
+		colRender: ((ColumnIteration)->())? = nil,
+		rowRender: ((RowIteration)->())? = nil,
+		cellRender: ((CellIteration)->())? = nil
 	) {
 		let cells = cells()
 		self.init(
 			cols: .init(col: col),
 			rows: rows,
-			render: .init(row: render),
+			render: .init(column: colRender, row: rowRender, cell: cellRender),
 			cells: cells)
 	}
 
@@ -70,8 +74,8 @@ public extension Grid {
 		leader: Track? = nil,
 		rows: TrackFactory = .init(),
 		@JCSLayoutElementBuilder cells: ()->Cells,
-		rowRender: ((RowIteration)->())? = nil,
 		colRender: ((ColumnIteration)->())? = nil,
+		rowRender: ((RowIteration)->())? = nil,
 		cellRender: ((CellIteration)->())? = nil
 	) {
 		let cells = cells()
