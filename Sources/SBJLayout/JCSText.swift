@@ -53,10 +53,13 @@ public struct JCSText: JCSLayoutElement {
 	
 	public func measure(bounds: CGSize = .unbounded) -> CGSize {
 		guard let content else {
-			let lines = self.lines ?? 1...1
-			return CGSize(
-				width: 0.0,
-				height: ceil(CGFloat(lines.lowerBound) * font.lineHeight))
+			if let lines {
+				return .init(
+					width: 0.0,
+					height: ceil(CGFloat(lines.lowerBound) * font.lineHeight))
+			} else {
+				return .zero
+			}
 		}
 		var measured = content.boundingRect(
 			with: bounds,

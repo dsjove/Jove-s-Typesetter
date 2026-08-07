@@ -201,3 +201,111 @@ struct GridRenderingTests {
 		#expect(cellCount == 0)
 	}
 }
+
+extension GridRenderingTests {
+	@Test("Table header does not size a column whose body widths are all zero")
+	func tableHeaderDoesNotSizeEmptyColumn() {
+		let cells = [
+			DrawingElement(size: CGSize(width: 40, height: 10)),
+			DrawingElement(size: CGSize(width: 60, height: 10)),
+			DrawingElement(size: CGSize(width: 20, height: 10)),
+			DrawingElement(size: CGSize(width: 0, height: 10)),
+			DrawingElement(size: CGSize(width: 30, height: 10)),
+			DrawingElement(size: CGSize(width: 0, height: 10))
+		]
+		let grid = Grid(
+			table: [Track(.intrinsic()), Track(.intrinsic())],
+			header: Track(.intrinsic()),
+			rows: TrackFactory(.intrinsic()),
+			cells: { cells }
+		)
+
+		let definition = grid.layout.measure(bounds: .unbounded)
+
+		#expect(definition.columns.lengths == [40, 0])
+	}
+
+	@Test("Table header participates normally when a body cell is nonzero")
+	func tableHeaderParticipatesWhenColumnHasContent() {
+		let cells = [
+			DrawingElement(size: CGSize(width: 60, height: 10)),
+			DrawingElement(size: CGSize(width: 0, height: 10)),
+			DrawingElement(size: CGSize(width: 25, height: 10))
+		]
+		let grid = Grid(
+			table: [Track(.intrinsic())],
+			header: Track(.intrinsic()),
+			rows: TrackFactory(.intrinsic()),
+			cells: { cells }
+		)
+
+		let definition = grid.layout.measure(bounds: .unbounded)
+
+		#expect(definition.columns.lengths == [60])
+	}
+
+	@Test("Table header preserves the column's custom aggregate")
+	func tableHeaderPreservesCustomColumnAggregate() {
+		let column = Track(
+			.intrinsic(),
+			aggregate: { $0.reduce(0, +) }
+		)
+		let cells = [
+			DrawingElement(size: CGSize(width: 50, height: 10)),
+			DrawingElement(size: CGSize(width: 10, height: 10)),
+			DrawingElement(size: CGSize(width: 20, height: 10))
+		]
+		let grid = Grid(
+			table: [column],
+			header: Track(.intrinsic()),
+			rows: TrackFactory(.intrinsic()),
+			cells: { cells }
+		)
+
+		let definition = grid.layout.measure(bounds: .unbounded)
+
+		#expect(definition.columns.lengths == [80])
+	}
+
+	@Test("Table leader does not size a row whose remaining heights are all zero")
+	func tableLeaderDoesNotSizeEmptyRow() {
+		let cells = [
+			DrawingElement(size: CGSize(width: 10, height: 30)),
+			DrawingElement(size: CGSize(width: 10, height: 0)),
+			DrawingElement(size: CGSize(width: 10, height: 0)),
+			DrawingElement(size: CGSize(width: 10, height: 40)),
+			DrawingElement(size: CGSize(width: 10, height: 12)),
+			DrawingElement(size: CGSize(width: 10, height: 18))
+		]
+		let grid = Grid(
+			table: [Track(.intrinsic()), Track(.intrinsic())],
+			leader: Track(.intrinsic()),
+			rows: TrackFactory(.intrinsic()),
+			cells: { cells }
+		)
+
+		let definition = grid.layout.measure(bounds: .unbounded)
+
+		#expect(definition.rows.lengths == [0, 40])
+	}
+
+	@Test("Table leader participates normally when another cell in the row is nonzero")
+	func tableLeaderParticipatesWhenRowHasContent() {
+		let cells = [
+			DrawingElement(size: CGSize(width: 10, height: 40)),
+			DrawingElement(size: CGSize(width: 10, height: 12)),
+			DrawingElement(size: CGSize(width: 10, height: 18))
+		]
+		let grid = Grid(
+			table: [Track(.intrinsic()), Track(.intrinsic())],
+			leader: Track(.intrinsic()),
+			rows: TrackFactory(.intrinsic()),
+			cells: { cells }
+		)
+
+		let definition = grid.layout.measure(bounds: .unbounded)
+
+		#expect(definition.rows.lengths == [40])
+	}
+}
+

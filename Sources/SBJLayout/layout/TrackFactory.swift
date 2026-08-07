@@ -11,7 +11,7 @@ public struct TrackFactory {
 		_ length: TrackSize = .intrinsic(),
 		align: Alignment = .top,
 		gap: CGFloat = 2.0,
-		aggregate: @escaping (CGFloat, CGFloat) -> CGFloat = Swift.max,
+		aggregate: @escaping Track.Aggregate = { $0.max() },
 		minCount: Int = 0,
 		maxCount: Int = Int.max
 	) {

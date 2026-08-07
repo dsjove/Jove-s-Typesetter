@@ -61,19 +61,17 @@ public final class GridLayout<Element: TrackElement> {
 	}
 
 	private func intrinsicColumnWidth(_ column: Int, _ track: Track, _ bound: CGFloat) -> CGFloat {
-		let reduce = track.aggregate
-		var acc: CGFloat? = nil
+		var candidates: [CGFloat] = []
+		candidates.reserveCapacity(definition.rowCount)
 		definition.forEachCell(inColumn: column) { index in
-			let candidate = measureElement(at: index, bounds: CGSize(width: bound, height: .unbounded)).width
-			if candidate > 0.0 {
-				if let current = acc {
-					acc = reduce(current, candidate)
-				} else {
-					acc = candidate
-				}
-			}
+			candidates.append(
+				measureElement(
+					at: index,
+					bounds: CGSize(width: bound, height: .unbounded)
+				).width
+			)
 		}
-		return acc ?? 0
+		return track.aggregate(candidates) ?? 0
 	}
 
 	private func measureElementsForResolvedColumns() {
@@ -96,19 +94,14 @@ public final class GridLayout<Element: TrackElement> {
 	}
 
 	private func intrinsicRowHeight(_ row: Int, track: Track, _ bound: CGFloat) -> CGFloat {
-		let reduce = track.aggregate
-		var acc: CGFloat? = nil
+		var candidates: [CGFloat] = []
+		candidates.reserveCapacity(definition.columnCount)
 		definition.forEachCell(inRow: row) { index in
-			let candidate = measurements[index]?.size.height
-			if let candidate, candidate >= 0 {
-				if let current = acc {
-					acc = reduce(current, candidate)
-				} else {
-					acc = candidate
-				}
+			if let candidate = measurements[index]?.size.height {
+				candidates.append(candidate)
 			}
 		}
-		return acc ?? 0
+		return track.aggregate(candidates) ?? 0
 	}
 
 	private func canReuseIntrinsicMeasurement(at index: Int, resolvedWidth: CGFloat) -> Bool {

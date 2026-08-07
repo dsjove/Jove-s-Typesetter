@@ -288,7 +288,7 @@ extension GridLayoutTests {
 			MeasuringElement(size: CGSize(width: 15, height: 6))
 		]
 		let layout = GridLayout(
-			columns: TrackFactory(.intrinsic(), aggregate: +, minCount: 1, maxCount: 1),
+			columns: TrackFactory(.intrinsic(), aggregate: { $0.reduce(0, +) }, minCount: 1, maxCount: 1),
 			cells: cells,
 			arrangement: .tight
 		)
@@ -309,7 +309,7 @@ extension GridLayoutTests {
 				Track(.fixed(10)),
 				Track(.fixed(10))
 			]),
-			rows: TrackFactory(.intrinsic(), aggregate: +),
+			rows: TrackFactory(.intrinsic(), aggregate: { $0.reduce(0, +) }),
 			cells: cells,
 			arrangement: .tight
 		)
@@ -383,6 +383,68 @@ extension GridLayoutTests {
 		#expect(definition.rowCount == 3)
 		#expect(requestedRowIndices == [0, 1, 2])
 		#expect(definition.rows.lengths == [8, 8, 8])
+	}
+
+
+	@Test("Column aggregate receives every intrinsic width including zero")
+	func columnAggregateReceivesZeros() {
+		let cells = [
+			MeasuringElement(size: CGSize(width: 20, height: 4)),
+			MeasuringElement(size: CGSize(width: 0, height: 5)),
+			MeasuringElement(size: CGSize(width: 10, height: 6))
+		]
+		var received: [CGFloat] = []
+		let layout = GridLayout(
+			columns: TrackFactory(
+				.intrinsic(),
+				aggregate: {
+					received = $0
+					return $0.max()
+				},
+				minCount: 1,
+				maxCount: 1
+			),
+			cells: cells,
+			arrangement: .tight
+		)
+
+		_ = layout.measure(bounds: .unbounded)
+
+		#expect(received == [20, 0, 10])
+	}
+
+	@Test("Nil column aggregate resolves to zero intrinsic width")
+	func nilColumnAggregateMeansZero() {
+		let cell = MeasuringElement(size: CGSize(width: 20, height: 8))
+		let layout = GridLayout(
+			columns: TrackFactory(
+				col: Track(
+					.intrinsic(),
+					aggregate: { _ in nil }
+				)
+			),
+			cells: [cell],
+			arrangement: .tight
+		)
+
+		let definition = layout.measure(bounds: .unbounded)
+
+		#expect(definition.columns.lengths == [0])
+	}
+
+	@Test("Nil row aggregate resolves to zero intrinsic height")
+	func nilRowAggregateMeansZero() {
+		let cell = MeasuringElement(size: CGSize(width: 10, height: 8))
+		let layout = GridLayout(
+			columns: TrackFactory([Track(.fixed(10))]),
+			rows: TrackFactory(.intrinsic(), aggregate: { _ in nil }),
+			cells: [cell],
+			arrangement: .tight
+		)
+
+		let definition = layout.measure(bounds: .unbounded)
+
+		#expect(definition.rows.lengths == [0])
 	}
 
 }

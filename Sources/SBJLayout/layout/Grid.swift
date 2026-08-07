@@ -12,6 +12,7 @@ import CoreGraphics
 // TODO: Feature - Track Spans
 // TODO: Feature - dynamic gaps that fill (like SwiftUI spacer)
 // TODO: Feature - 'best fit' intrinsic size (allow 3, algorithm TBD)
+
 /*
 Custom Columns features not in scope...
 
@@ -72,20 +73,47 @@ public extension Grid {
 		cellRender: ((CellIteration)->())? = nil
 	) {
 		let cells = cells()
-		let cols = {
-			if let leader {
+
+		let tableColumns: [Column] = {
+			let columns = if let leader {
 				[leader] + cols
 			} else {
 				cols
 			}
+			guard header != nil else { return columns }
+			return columns.map { column in
+				let aggregate = column.aggregate
+				return Track(column) { candidates in
+					guard candidates.dropFirst().contains(where: { $0 > 0 }) else {
+						return nil
+					}
+					return aggregate(candidates)
+				}
+			}
 		}()
+
+		let tableRows = TrackFactory(
+			minCount: rows.minCount,
+			maxCount: rows.maxCount
+		) { index in
+			let row = if let header, index == 0 {
+				header
+			} else {
+				rows.def(index)
+			}
+			guard leader != nil else { return row }
+			let aggregate = row.aggregate
+			return Track(row) { candidates in
+				guard candidates.dropFirst().contains(where: { $0 > 0 }) else {
+					return nil
+				}
+				return aggregate(candidates)
+			}
+		}
+
 		self.init(
-			cols: .init(cols, map: columnMap),
-			rows: .init(
-				minCount: rows.minCount,
-				maxCount: rows.maxCount,
-				def: { if let header, $0 == 0 { header } else { rows.def($0) } }
-			),
+			cols: .init(tableColumns, map: columnMap),
+			rows: tableRows,
 			render: .init(column: colRender, row: rowRender, cell: cellRender),
 			cells: cells)
 	}
