@@ -12,6 +12,7 @@ import CoreGraphics
 // TODO: Feature - Track Spans
 // TODO: Feature - dynamic gaps that fill (like SwiftUI spacer)
 // TODO: Feature - 'best fit' intrinsic size (allow 3, algorithm TBD)
+// TODO: Feature - lexical alignment accross cells
 
 /*
 Custom Columns features not in scope...
@@ -210,9 +211,7 @@ public struct Grid: JCSLayoutElement {
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
 		let definition = layout.measure(bounds: measured)
 		let positioned = align.apply(size: definition.size, in: allocated)
-if id.isEmpty == false {
-	JCSRect(stroke: .blue.withAlphaComponent(0.5) , lineWidth: 1.5).draw(in: positioned)
-}
+//JCSRect(stroke: .blue.withAlphaComponent(0.5) , lineWidth: 1.5).draw(in: positioned)
 		definition.iterate(
 			allocated: positioned,
 			column: render.column,

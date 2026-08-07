@@ -196,7 +196,19 @@ public class TrackLayout {
 		lastBounds = available
 		metrics.lengths = preparedLengths
 		metrics.size = calculateSize()
-		guard available != .unbounded else { return }
+
+		if available == .unbounded {
+			let allFill = metrics.tracks.allSatisfy { track in
+				if case .fill = track.length {
+					return true
+				}
+				return false
+			}
+			if allFill && metrics.size == 0 {
+				metrics.size = 1
+			}
+			return
+		}
 
 		let dftFillFraction = 1.0 / CGFloat(fillCount)
 		if layout == .stack {
