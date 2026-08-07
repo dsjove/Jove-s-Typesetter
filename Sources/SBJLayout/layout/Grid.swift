@@ -7,6 +7,7 @@ import CoreGraphics
 //     header duplication?
 // TODO: Feature - identifiable reducers and groupings for uniform Tracks
 // TODO: Feature - cross grid sizing sync
+// TODO: Feature - draw placeholder tracks to bounded edge
 
 // Custom Columns Features Remaining ...
 // TODO: Feature - Track Spans

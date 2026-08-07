@@ -2,7 +2,6 @@ import CoreGraphics
 
 public struct Panel<C: JCSLayoutElement>: JCSLayoutElement {
 	let insets: Insets
-	let align: Alignment
 	//TODO: Aspect
 	//TODO: min/max sizes
 	let background: JCSRect
@@ -10,23 +9,20 @@ public struct Panel<C: JCSLayoutElement>: JCSLayoutElement {
 
 	public init(
 		insets: Insets = .init(),
-		align: Alignment = .center,
 		background: JCSRect = .init(),
 		content: ()->C
 	) {
-		self.init(insets: insets, align: align, background: background, content: content())
+		self.init(insets: insets, background: background, content: content())
 	}
 
 	public init(
 		insets: Insets = .init(),
-		align: Alignment = .center,
 		background: JCSRect = .init(),
 		content: C
 	) {
 		self.content = content
 		self.insets = insets
 		self.background = background
-		self.align = align
 	}
 	
 	public func measure(bounds: CGSize) -> CGSize {
@@ -39,6 +35,7 @@ public struct Panel<C: JCSLayoutElement>: JCSLayoutElement {
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
 		background.draw(in: allocated)
 		let positioned = insets.apply(rect: allocated)
-		content.draw(in: positioned, measured: measured, align: align)
+		let contentMeasured = insets.apply(size: measured)
+		content.draw(in: positioned, measured: contentMeasured, align: align)
 	}
 }
