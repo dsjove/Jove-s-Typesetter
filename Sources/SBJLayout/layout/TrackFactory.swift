@@ -10,7 +10,7 @@ public struct TrackFactory {
 	public init(
 		_ length: TrackSize = .intrinsic(),
 		align: Alignment = .top,
-		gap: CGFloat = 2.0,
+		gap: CGFloat = 3.0,
 		aggregate: @escaping Track.Aggregate = { $0.max() },
 		minCount: Int = 0,
 		maxCount: Int = Int.max

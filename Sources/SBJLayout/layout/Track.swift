@@ -11,7 +11,7 @@ public struct Track {
 	public init(
 		_ length: TrackSize = .intrinsic(),
 		align: Alignment = .left, //Column centric
-		gap: CGFloat = 4.0,
+		gap: CGFloat = 3.0,
 		aggregate: @escaping Aggregate = { $0.max() }
 	) {
 		self.length = length
