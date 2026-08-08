@@ -4,7 +4,7 @@ public protocol JCSLayoutElement: TrackElement {
 	// allocated and contentSize with unbounded values is undefined
 	func draw(in allocated: CGRect, measured: CGSize, align: Alignment)
 
-	var page: Pagination { get }
+	var pagination: Pagination { get }
 }
 
 public extension JCSLayoutElement {
@@ -22,7 +22,7 @@ public extension JCSLayoutElement {
 		return allocated
 	}
 
-	var page: Pagination {
+	var pagination: Pagination {
 		layoutElementPage
 	}
 }
@@ -100,5 +100,50 @@ public struct JCSLayoutElementBuilder {
 		_ components: [Component]
 	) -> Component {
 		components.flatMap { $0 }
+	}
+}
+
+@resultBuilder
+public struct JCSLayoutElementOptionalBuilder {
+	public typealias Component = (any JCSLayoutElement)?
+
+	public static func buildExpression<T: JCSLayoutElement>(
+		_ expression: T
+	) -> Component {
+		expression
+	}
+
+	public static func buildExpression(
+		_ expression: Component
+	) -> Component {
+		expression
+	}
+
+	public static func buildOptional(
+		_ component: Component?
+	) -> Component {
+		component ?? nil
+	}
+
+	public static func buildEither(
+		first component: Component
+	) -> Component {
+		component
+	}
+
+	public static func buildEither(
+		second component: Component
+	) -> Component {
+		component
+	}
+
+	public static func buildBlock(
+		_ component: Component
+	) -> Component {
+		component
+	}
+
+	public static func buildBlock() -> Component {
+		nil
 	}
 }

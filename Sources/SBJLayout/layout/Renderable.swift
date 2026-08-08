@@ -3,9 +3,9 @@ import CoreGraphics
 public protocol Renderable: TrackElement {
 	// allocated and contentSize with unbounded values is undefined
 	//TODO: add size class to measure/draw and replace JCSLayoutElement
-	func draw(in allocated: CGRect, measured: CGSize, align: Alignment)
+	func render(in allocated: CGRect, measured: CGSize, align: Alignment)
 
-	var page: Pagination { get }
+	var pagination: Pagination { get }
 }
 
 nonisolated(unsafe) internal var layoutElementPage: Pagination = BasicPagination()
@@ -16,8 +16,8 @@ public extension Renderable {
 	}
 
 	// Does not measure, uses allocated size if no measurement supplied
-	func draw(in allocated: CGRect, measured: CGSize? = nil, align: Alignment = .leftTop) {
-		draw(in: allocated, measured: measured ?? allocated.size, align: align)
+	func render(in allocated: CGRect, measured: CGSize? = nil, align: Alignment = .leftTop) {
+		render(in: allocated, measured: measured ?? allocated.size, align: align)
 	}
 
 	// Auto measures, draws at origin, and returns allocated rect at origin
@@ -25,11 +25,11 @@ public extension Renderable {
 	func draw(at origin: CGPoint, bounds: CGSize = .unbounded, align: Alignment = .leftTop) -> CGRect {
 		let measured = measure(bounds: bounds)
 		let allocated = CGRect(origin: origin, size: measured)
-		draw(in: allocated, measured: measured, align: align)
+		render(in: allocated, measured: measured, align: align)
 		return allocated
 	}
 
-	var page: Pagination {
+	var pagination: Pagination {
 		layoutElementPage
 	}
 }
@@ -47,7 +47,7 @@ public struct EmptyRenderables: Renderable {
 			height: size.height.isUnbounded ? size.height : bounds.height)
 	}
 
-	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {}
+	public func render(in allocated: CGRect, measured: CGSize, align: Alignment) {}
 }
 
 public typealias Renderables = [any Renderable]
@@ -108,5 +108,50 @@ public struct RenderableBuilder {
 		_ components: [Component]
 	) -> Component {
 		components.flatMap { $0 }
+	}
+}
+
+@resultBuilder
+public struct RenderableOptionalBuilder {
+	public typealias Component = (any Renderable)?
+
+	public static func buildExpression<T: Renderable>(
+		_ expression: T
+	) -> Component {
+		expression
+	}
+
+	public static func buildExpression(
+		_ expression: Component
+	) -> Component {
+		expression
+	}
+
+	public static func buildOptional(
+		_ component: Component?
+	) -> Component {
+		component ?? nil
+	}
+
+	public static func buildEither(
+		first component: Component
+	) -> Component {
+		component
+	}
+
+	public static func buildEither(
+		second component: Component
+	) -> Component {
+		component
+	}
+
+	public static func buildBlock(
+		_ component: Component
+	) -> Component {
+		component
+	}
+
+	public static func buildBlock() -> Component {
+		nil
 	}
 }

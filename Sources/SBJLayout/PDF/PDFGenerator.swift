@@ -16,21 +16,26 @@ public struct PDFGenerator {
 		self.landscape = landscape
 	}
 
-	public func render(_ content: JCSLayoutElement, _ paging: ((Pagination) -> CGRect?)? = nil) -> Data {
+	public func render(_ content: JCSLayoutElement, _ paging: ((Pagination) -> ())? = nil) -> Data {
 		let pageRect = pageSize.rect(landscape: landscape, margin: .zero)
 		let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
 		return renderer.pdfData { context in
 			let page = BasicPagination(size: pageSize, margin: margin, landscape: landscape) {
 				context.beginPage()
-				return paging?($0)
+				paging?($0)
 			}
 			layoutElementPage = page
-			//TODO: Not measured?
-			content.draw(in: page.contentRect)
+			let measured = content.measure(bounds: CGSize(fixedWidth: page.printableRect.width))
+			let allocated = CGRect(origin: page.printableRect.origin, size: measured)
+//TODO: Pagination - inspect journal for page inserts
+			content.draw(in: allocated)
+page.journal.forEach {
+	print("Pagination: \($0)")
+}
 		}
 	}
 
-	public func form(_ content: JCSLayoutElement, _ paging: ((Pagination) -> CGRect?)? = nil) -> (Data, PDFDocument?) {
+	public func form(_ content: JCSLayoutElement, _ paging: ((Pagination) -> ())? = nil) -> (Data, PDFDocument?) {
 		let pdfData: Data = render(content, paging)
 		return (pdfData, PDFDocument(data: pdfData))
 	}

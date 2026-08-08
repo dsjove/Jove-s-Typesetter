@@ -5,12 +5,13 @@ public struct Panel<C: JCSLayoutElement>: JCSLayoutElement {
 	//TODO: Aspect
 	//TODO: min/max sizes
 	let background: JCSRect
-	let content: C
+	let content: C?
 
 	public init(
 		insets: Insets = .init(),
 		background: JCSRect = .init(),
-		content: ()->C
+		@JCSLayoutElementOptionalBuilder
+		content: ()->C?
 	) {
 		self.init(insets: insets, background: background, content: content())
 	}
@@ -18,7 +19,7 @@ public struct Panel<C: JCSLayoutElement>: JCSLayoutElement {
 	public init(
 		insets: Insets = .init(),
 		background: JCSRect = .init(),
-		content: C
+		content: C?
 	) {
 		self.content = content
 		self.insets = insets
@@ -26,16 +27,21 @@ public struct Panel<C: JCSLayoutElement>: JCSLayoutElement {
 	}
 	
 	public func measure(bounds: CGSize) -> CGSize {
-		let inset = insets.apply(size: bounds)
-		let size = content.measure(bounds: inset)
-		let outset = insets.apply(size: size, inverse: true)
-		return outset
+		if let content {
+			let inset = insets.apply(size: bounds)
+			let size = content.measure(bounds: inset)
+			let outset = insets.apply(size: size, inverse: true)
+			return outset
+		}
+		return .zero
 	}
 
 	public func draw(in allocated: CGRect, measured: CGSize, align: Alignment) {
-		background.draw(in: allocated)
-		let positioned = insets.apply(rect: allocated)
-		let contentMeasured = insets.apply(size: measured)
-		content.draw(in: positioned, measured: contentMeasured, align: align)
+		if let content {
+			background.draw(in: allocated)
+			let positioned = insets.apply(rect: allocated)
+			let contentMeasured = insets.apply(size: measured)
+			content.draw(in: positioned, measured: contentMeasured, align: align)
+		}
 	}
 }
